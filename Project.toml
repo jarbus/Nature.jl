@@ -3,6 +3,13 @@ uuid = "98fd772f-0cbc-4ada-a6cb-9d3ad163cfa8"
 authors = ["jarbus <jarbus@tutanota.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+ReinforcementLearning = "158674fc-8238-5cab-b5ba-03dfc80d1318"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
 [compat]
 julia = "1.7"
 
