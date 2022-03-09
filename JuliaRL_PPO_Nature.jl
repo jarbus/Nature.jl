@@ -3,30 +3,12 @@ using StableRNGs
 using Flux
 using Flux.Losses
 using Nature
-using Plots
-using Debugger
+# using Serialization
+using TensorBoardLogger, Logging
+using Infiltrator
+using SparseArrays
 
-
-mutable struct FoodCountHook1 <: AbstractHook
-    step::Int
-    food_counts::Dict{Int, Dict{Int, Vector{Int}}}
-end
-function FoodCountHook1(env::NatureEnv)
-    FoodCountHook(0,
-        Dict(
-            i=>Dict(f=>[] for f in 1:env.food_types)
-            for i in 1:length(env.players)))
-end
-FoodCountHook = FoodCountHook1
-
-
-function (hook::FoodCountHook)(::PostActStage, policy, env)
-    for (p, player) in enumerate(env.players)
-        for f in 1:env.food_types
-            push!(hook.food_counts[p][f], player.food_counts[f])
-        end
-    end
-end
+MAX_STEPS=1_000_000
 
 
 function RL.Experiment(
@@ -37,49 +19,75 @@ function RL.Experiment(
     save_dir = nothing,
     seed = 123,
 )
-    rng = StableRNG(seed)
-    N_STARTING_PLAYERS = 8
-    N_STARTING_PLAYERS=2
-    UPDATE_FREQ = 32
-    env = NatureEnv(num_starting_players=N_STARTING_PLAYERS)
-    reset!(env)
-    ns, na = size(state(env, 1)), length(action_space(env,1))
-    println(ns, na)
 
+
+    N_STARTING_PLAYERS = 8
+    UPDATE_FREQ = 200
+    OBS_SIZE = (32, 32, 3)
+    clip = 0.1f0
+
+    lg=TBLogger("tensorboard_logs/run clip=$clip uf=$UPDATE_FREQ")
+    global_logger(lg)
+
+
+    rng = StableRNG(seed)
+    env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
+                    observation_size=OBS_SIZE,
+                    food_generators=[
+                        FoodGen([15,15],[20,20]),
+                       ])
+    Nature.reset!(env)
+    ns, na = size(state(env, 1)), length(action_space(env,1))
+
+    cnn_output_shape = Int.(floor.([ns[1]/8, ns[2]/8,32]))
     create_actor() = Chain(
-        Conv((3,3), 4=>16, relu),
-        Flux.flatten,
-        Dense(14400, 64, relu; init = glorot_uniform(rng)),
-        Dense(64, na; init = glorot_uniform(rng)),
+        Conv((3,3), ns[3]=>16, pad=(1,1), relu),
+        MaxPool((2,2)),
+        # Second convolution, operating upon a 14x14 image
+        Conv((3, 3), 16=>32, pad=(1,1), relu),
+        MaxPool((2,2)),
+        # Third convolution, operating upon a 7x7 image
+        Conv((3, 3), 32=>32, pad=(1,1), relu),
+        MaxPool((2,2)),
+        flatten,
+        Dense(prod(cnn_output_shape), 64),
+        Dense(64, na)
     )
 
     create_critic() = Chain(
-        Conv((3,3),4=>16, relu),
-        Flux.flatten,
-        Dense(14400, 64, relu; init = glorot_uniform(rng)),
-        Dense(64, 1; init = glorot_uniform(rng)),
+        Conv((3,3), ns[3]=>16, pad=(1,1), relu),
+        MaxPool((2,2)),
+        # Second convolution, operating upon a 14x14 image
+        Conv((3, 3), 16=>32, pad=(1,1), relu),
+        MaxPool((2,2)),
+        # Third convolution, operating upon a 7x7 image
+        Conv((3, 3), 32=>32, pad=(1,1), relu),
+        MaxPool((2,2)),
+        flatten,
+        Dense(prod(cnn_output_shape), 64),
+        Dense(64, 1)
     )
 
     create_trajectory() = PPOTrajectory(;
         capacity = UPDATE_FREQ,
-        state = Array{Float32, 4} => (ns..., 1),
-        action = Vector{Int} => (1,),
-        action_log_prob = Vector{Float32} => (1,),
-        reward = Vector{Float32} => (1,),
-        terminal = Vector{Bool} => (1,),
+        state = Array{Float32, 4} => (ns..., N_STARTING_PLAYERS),
+        action = Vector{Int} => (N_STARTING_PLAYERS,),
+        action_log_prob = Vector{Float32} => (N_STARTING_PLAYERS,),
+        reward = Vector{Float32} => (N_STARTING_PLAYERS,),
+        terminal = Vector{Bool} => (N_STARTING_PLAYERS,),
     )
 
     # TODO CHANGE THIS TO BE DYNAMIC UPDATE FREQ AS NUM AGENTS CHANGES
     function create_policy()
         PPOPolicy(
             approximator = ActorCritic(
-                actor = create_actor(),
-                critic = create_critic(),
+                actor = create_actor() |> gpu,
+                critic = create_critic() |> gpu,
                 optimizer = ADAM(1e-3),
             ),
             γ = 0.99f0,
             λ = 0.95f0,
-            clip_range = 0.1f0,
+            clip_range = clip,
             max_grad_norm = 0.5f0,
             n_epochs = 4,
             n_microbatches = 4,
@@ -89,43 +97,29 @@ function RL.Experiment(
             update_freq = UPDATE_FREQ*N_STARTING_PLAYERS,
         )
     end
-    shared_policy = create_policy()
 
     create_agent() = Agent(
-        policy = shared_policy,
+        policy = create_policy(),
         trajectory = create_trajectory()
     )
-
-    t = create_trajectory()
+    agent1 = create_agent()
+    agent_map = Dict(player => agent1 for player in 1:N_STARTING_PLAYERS)
+    agent_inv_map = Dict(agent1 => [player for player in 1:N_STARTING_PLAYERS])
 
     agents = MultiPPOManager(
-        Dict(player => create_agent() for player in 1:N_STARTING_PLAYERS),
+        agent_map,
+        agent_inv_map,
         PPOTrajectory, # trace's type
         512, # batch_size
-        100, # update_freq
-        0, # initial update_step
         rng
     )
 
-    stop_condition = StopAfterStep(10_000, is_show_progress=!haskey(ENV, "CI"))
-    hook = FoodCountHook(env)
+    stop_condition = StopAfterStep(MAX_STEPS, is_show_progress=!haskey(ENV, "CI"))
+    hook = NatureHook(env)
     Experiment(agents, env, stop_condition, hook, "# PPO with Nature")
 
 end
 
-# using Plots
-# using Statistics
-# # pyplot() #hide
-plot();
 ex = E`JuliaRL_PPO_Nature`
 run(ex)
-for p in 1:length(ex.env.players)
-    for f in 1:ex.env.food_types
-        plot!(ex.hook.food_counts[p][f], label="player $p food $f")
-    end
-end
-# n = minimum(map(length, ex.hook.rewards))
-# m = mean([@view(x[1:n]) for x in ex.hook.rewards])
-# s = std([@view(x[1:n]) for x in ex.hook.rewards])
-# plot(m,ribbon=s)
-# savefig("assets/JuliaRL_PPO_Nature.png") #hide
+# step_through_env(ex.env, policy)

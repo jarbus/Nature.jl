@@ -1,127 +1,152 @@
 export MultiPPOManager
 
-"""
-    MultiPPOManager(; agents::Dict{<:Any, <:Agent}, args...)
-Multi-agent Deep Deterministic Policy Gradient(MultiPPO) implemented in Julia. By default, `MultiPPOManager` uses for simultaneous environments with [continuous action space](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html#stochastic-policies).
-See the paper https://arxiv.org/abs/1706.02275 for more details.
-
-# Keyword arguments
-- `agents::Dict{<:Any, <:Agent}`, here each agent collects its own information. While updating the policy, each **critic** will assemble all agents'
-  trajectory to update its own network. **Note that** here the policy of the `Agent` should be `DDPGPolicy` wrapped by `NamedPolicy`, see the relative
-  experiment([`MultiPPO_KuhnPoker`](https://juliareinforcementlearning.org/docs/experiments/experiments/Policy%20Gradient/JuliaRL_MultiPPO_KuhnPoker/#JuliaRL\\_MultiPPO\\_KuhnPoker) or [`MultiPPO_SpeakerListener`](https://juliareinforcementlearning.org/docs/experiments/experiments/Policy%20Gradient/JuliaRL_MultiPPO_SpeakerListener/#JuliaRL\\_MultiPPO\\_SpeakerListener)) for references.
-- `traces`, set to `SARTS` if you are apply to an environment of `MINIMAL_ACTION_SET`, or `SLARTSL` if you are to apply to an environment of `FULL_ACTION_SET`.
-- `batch_size::Int`
-- `update_freq::Int`
-- `update_step::Int`, count the step.
-- `rng::AbstractRNG`.
-"""
 mutable struct MultiPPOManager <: AbstractPolicy
     agents::Dict{Int, Agent}
+    agents_inv::Dict{Agent, Vector{Int}}
     traces
     batch_size::Int
-    update_freq::Int
-    update_step::Int
     rng::AbstractRNG
 end
 
 Base.getindex(A::MultiPPOManager, x) = getindex(A.agents, x)
 # used for simultaneous environments.
 function (π::MultiPPOManager)(env::AbstractEnv)
-    Dict(player => agent.policy(env, player)
-    for (player, agent) in π.agents)
-end
+    actions = Dict()
+    for (agent::Agent, players) in π.agents_inv
 
+        states = [state(env, p) for p in players]
+        states = cat(states..., dims=ndims(states[1])+1)
+        # no mask rn
+        dists = prob(agent.policy, states, nothing)
 
-function (p::PPOPolicy)(env::AbstractEnv, player::Int)
-    dist =  prob(p, env, player)
-    action = rand.(p.rng,dist)
-    if ndims(action) == 2
-        action_log_prob = sum(logpdf.(dist, action), dims = 1)
-    else
-        action_log_prob = logpdf.(dist, action)
+        for (p, dist) in zip(players, dists)
+            @assert length(dists[p].p) >= 6 && length(dists[p].p) % 2 == 0
+            action = rand.(agent.policy.rng, dist)
+            if ndims(action) == 2
+                action_log_prob = sum(logpdf.(dist, action), dims = 1)
+            else
+                action_log_prob = logpdf.(dist, action)
+            end
+
+            actions[p] = EnrichedAction(action; action_log_prob = [action_log_prob])
+        end
     end
-    a = EnrichedAction(action; action_log_prob = vec(action_log_prob))
-    # println(a)
-    a
+    actions
 end
 
-
-function RLBase.prob(p::PPOPolicy, env::AbstractEnv, player::Int)
-    s = state(env, player)
-    s = Flux.unsqueeze(s, ndims(s) + 1)
-    mask =  ActionStyle(env) === FULL_ACTION_SET ? legal_action_space_mask(env) : nothing
-    prob(p, s, mask)
-end
-
-#RLBase.prob(A::MultiAgentManager, env::AbstractEnv, args...) = prob(A[current_player(env)].policy, env, args...)
-
-function (π::MultiPPOManager)(stage::PostActStage, env::AbstractEnv)
-    # only need to update trajectory.
-    for (p, agent) in π.agents
-        update!(agent.trajectory, agent.policy, env, stage, p)
-    end
-end
 
 function (π::MultiPPOManager)(stage::PreActStage, env::AbstractEnv, actions)
     # update each agent's trajectory.
-    for (player, agent) in π.agents
-
-        update!(agent.trajectory, agent.policy, env, stage, player, actions[player])
+    for (agent, players) in π.agents_inv
+        update_trajectory!(agent, env, stage, actions, players)
+        # if agent.policy.update_step % agent.policy.update_freq == 0
+        #     @infiltrate
+        # end
         update!(agent.policy, agent.trajectory, env, stage)
-
     end
-
-    # update policy
-    # update!(π.agents[1].policy, env)
 end
 
-# function (π::MultiPPOManager)(stage::PostEpisodeStage, env::AbstractEnv)
-#     # collect state and a dummy action to each agent's trajectory here.
-#     for (_, agent) in π.agents
-#         update!(agent.trajectory, agent.policy, env, stage)
-#     end
 
-#     # update policy
-#     update!(π, env)
-# end
+function (π::MultiPPOManager)(stage::PostActStage, env::AbstractEnv)
+    # only need to update trajectory.
+    for (agent, players) in π.agents_inv
+        update_trajectory!(agent, env, stage, players)
+    end
+end
 
 
-function RLBase.update!(
-    trajectory::AbstractTrajectory,
-    policy::AbstractPolicy,
+function (π::MultiPPOManager)(stage::PostEpisodeStage, env::AbstractEnv)
+    # collect state and a dummy action to each agent's trajectory here.
+    for (agent, players) in π.agents_inv
+        update_trajectory!(agent, env, stage, players)
+    end
+end
+
+function update_trajectory!(
+    agent::Agent,
+    env::AbstractEnv,
+    ::PostEpisodeStage,
+    players::Vector{Int}
+)
+    # Note that for trajectories like `CircularArraySARTTrajectory`, data are
+    # stored in a SARSA format, which means we still need to generate a dummy
+    # action at the end of an episode.
+
+    state_dict = state(env, players)
+    states = ecat([state_dict[p] for p in players]...)
+    actions = [RLCore.get_dummy_action(action_space(env, p)) for p in players]
+
+    push!(agent.trajectory[:state], states)
+    push!(agent.trajectory[:action], actions)
+    # if haskey(trajectory, :legal_actions_mask)
+    #     lasm =
+    #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
+    #         legal_action_space_mask(env)
+    #     push!(trajectory[:legal_actions_mask], lasm)
+    # end
+end
+
+
+function update_trajectory!(
+    agent::Agent,
     env::AbstractEnv,
     ::PreActStage,
-    player::Int,
-    action::EnrichedAction,
+    actions::Dict,
+    players::Vector{Int}
 )
-    @bp
-    s = policy isa NamedPolicy ? state(env, player, nameof(policy)) : state(env, player)
+    state_dict = state(env, players)
 
-    push!(trajectory;
-            state=s,
-            action=action.action,
-            action_log_prob=action.meta.action_log_prob)
-    if haskey(trajectory, :legal_actions_mask)
-        lasm =
-            policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
-            legal_action_space_mask(env)
-        push!(trajectory[:legal_actions_mask], lasm)
-    end
+    push!(agent.trajectory;
+          state           = ecat([state_dict[p] for p in players]...),
+          action          = ecat([actions[p].action for p in players]...),
+          action_log_prob = ecat([actions[p].action for p in players]...))
+    # if haskey(agent.trajectory, :legal_actions_mask)
+    #     lasm =
+    #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
+    #         legal_action_space_mask(env)
+    #     push!(agent.trajectory[:legal_actions_mask], lasm)
+    # end
 end
 
 
-function RLBase.update!(
-    trajectory::AbstractTrajectory,
-    policy::AbstractPolicy,
+function update_trajectory!(
+    agent::Agent,
     env::AbstractEnv,
     ::PostActStage,
-    player::Int,
+    players::Vector{Int}
 )
-    r = policy isa NamedPolicy ? reward(env, player) : reward(env, player)
-    push!(trajectory[:reward], r)
-    push!(trajectory[:terminal], is_terminated(env))
+    reward_dict = reward(env, players)
+    term_dict = is_terminated(env, players)
+    push!(agent.trajectory[:reward],   ecat([reward_dict[p] for p in players]...))
+    push!(agent.trajectory[:terminal], ecat([term_dict[p]   for p in players]...))
+    # println(agent.trajectory[:action][:,end])
+    # println(agent.trajectory[:reward][:,end])
 end
 
+# function RLBase.update!(
+#     trajectory::AbstractTrajectory,
+#     policy::AbstractPolicy,
+#     env::AbstractEnv,
+#     ::PostEpisodeStage,
+# )
+#     # Note that for trajectories like `CircularArraySARTTrajectory`, data are
+#     # stored in a SARSA format, which means we still need to generate a dummy
+#     # action at the end of an episode.
+
+#     s = policy isa NamedPolicy ? state(env, nameof(policy)) : state(env)
+
+#     action_space = policy isa NamedPolicy ? action_space(env, nameof(policy)) : action_space(env)
+#     a = get_dummy_action(action_space)
+
+#     push!(trajectory[:state], s)
+#     push!(trajectory[:action], a)
+#     if haskey(trajectory, :legal_actions_mask)
+#         lasm =
+#             policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
+#             legal_action_space_mask(env)
+#         push!(trajectory[:legal_actions_mask], lasm)
+#     end
+# end
 
 # function RLBase.update!(
 #     p::PPOPolicy,
@@ -153,4 +178,23 @@ end
 #     if trajectory isa MaskedPPOTrajectory
 #         push!(trajectory; legal_actions_mask = legal_action_space_mask(env))
 #     end
+# end
+
+# function RLBase.prob(p::PPOPolicy, env::NatureEnv, player::Int)
+#     s = state(env, player)
+#     s = Flux.unsqueeze(s, ndims(s) + 1)
+#     mask =  ActionStyle(env) === FULL_ACTION_SET ? legal_action_space_mask(env) : nothing
+#     prob(p, s, mask)
+# end
+
+# function (p::PPOPolicy)(env::AbstractEnv, player::Int)
+#     dist =  prob(p, env, player)
+#     action = rand.(p.rng,dist)
+#     if ndims(action) == 2
+#         action_log_prob = sum(logpdf.(dist, action), dims = 1)
+#     else
+#         action_log_prob = logpdf.(dist, action)
+#     end
+#     a = EnrichedAction(action; action_log_prob = vec(action_log_prob))
+#     a
 # end

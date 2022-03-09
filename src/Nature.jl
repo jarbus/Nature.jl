@@ -11,11 +11,12 @@ using LinearAlgebra
 using StableRNGs
 using Random
 using Flux
-using Debugger
+using Plots
+using Infiltrator
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 
-export NatureEnv, FoodGen, reset!, remove!
+export NatureEnv, FoodGen, reset!, remove!, visualize, step_through_env, MultiPPOManager, NatureHook, ($)
 include("./structs.jl")
 include("./utils.jl")
 include("./act.jl")
@@ -24,6 +25,8 @@ include("./food.jl")
 include("./natureenv.jl")
 include("./multippo.jl")
 include("./debug.jl")
+include("./visualize.jl")
+include("./hooks.jl")
 # Write your package code here.
 
 end

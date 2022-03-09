@@ -9,7 +9,7 @@ function move(env::NatureEnv, player::Int, dir::Int)
 end
 # Perform a food action
 function food(env::NatureEnv, p::Int, idx::Int)
-    # [ pick1, place1, pick2, place2, ... pickf, placef]
+    # [ place1, pick1, place2, pick2, ... placef, pickf]
     pick  = idx % 2 == 1
     place = idx % 2 == 0
     food_type = floor(Int, ((idx - 1) / 2)) + 1
@@ -22,6 +22,6 @@ function food(env::NatureEnv, p::Int, idx::Int)
         remove!(fframe, player.pos...)
     elseif place && player.food_counts[food_type] > 0
         player.food_counts = Tuple(player.food_counts .- onehot(food_type, env.food_types))
-        fframe[player.pos...] += 1
+        # fframe[player.pos...] += 1
     end
 end

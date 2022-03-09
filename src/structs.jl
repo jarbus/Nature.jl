@@ -12,6 +12,7 @@ end
 
 mutable struct NatureEnv{F} <: AbstractEnv
     # Benchmark bitarray, figure out whether they should be structs or mutable
+    step::Int
     num_starting_players::Int
     players::Vector{Player{F}}
     food_types::Int
