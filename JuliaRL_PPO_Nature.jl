@@ -8,7 +8,7 @@ using TensorBoardLogger, Logging
 using Infiltrator
 using SparseArrays
 
-MAX_STEPS=1_000_000
+MAX_STEPS=10_000_000
 
 
 function RL.Experiment(
@@ -21,8 +21,9 @@ function RL.Experiment(
 )
 
 
+
     N_STARTING_PLAYERS = 8
-    UPDATE_FREQ = 200
+    UPDATE_FREQ = 512
     OBS_SIZE = (32, 32, 3)
     clip = 0.1f0
 
@@ -94,7 +95,7 @@ function RL.Experiment(
             actor_loss_weight = 1.0f0,
             critic_loss_weight = 0.5f0,
             entropy_loss_weight = 0.001f0,
-            update_freq = UPDATE_FREQ*N_STARTING_PLAYERS,
+            update_freq = UPDATE_FREQ,
         )
     end
 

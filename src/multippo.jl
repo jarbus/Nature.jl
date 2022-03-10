@@ -62,6 +62,16 @@ function (π::MultiPPOManager)(stage::PostEpisodeStage, env::AbstractEnv)
     end
 end
 
+# function (π::MultiPPOManager)(stage::PreEpisodeStage, env::AbstractEnv)
+#     push!(agent.trajectory[:state], states)
+# function (π::MultiPPOManager)(stage::PreEpisodeStage, env::AbstractEnv)
+#     # collect state and a dummy action to each agent's trajectory here.
+#     for (agent, _) in π.agents_inv
+#         update_trajectory!(agent, env, stage)
+#     end
+# end
+
+
 function update_trajectory!(
     agent::Agent,
     env::AbstractEnv,
@@ -76,8 +86,10 @@ function update_trajectory!(
     states = ecat([state_dict[p] for p in players]...)
     actions = [RLCore.get_dummy_action(action_space(env, p)) for p in players]
 
-    push!(agent.trajectory[:state], states)
-    push!(agent.trajectory[:action], actions)
+    # push!(agent.trajectory[:state], states)
+    # push!(agent.trajectory[:action], actions)
+    # push!(agent.trajectory[:action], actions)
+
     # if haskey(trajectory, :legal_actions_mask)
     #     lasm =
     #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
@@ -85,6 +97,8 @@ function update_trajectory!(
     #     push!(trajectory[:legal_actions_mask], lasm)
     # end
 end
+
+
 
 
 function update_trajectory!(
@@ -116,12 +130,60 @@ function update_trajectory!(
     players::Vector{Int}
 )
     reward_dict = reward(env, players)
+    rew_mat = ecat([reward_dict[p] for p in players]...)
+
     term_dict = is_terminated(env, players)
-    push!(agent.trajectory[:reward],   ecat([reward_dict[p] for p in players]...))
-    push!(agent.trajectory[:terminal], ecat([term_dict[p]   for p in players]...))
+    term_mat =  ecat([term_dict[p]   for p in players]...)
+
+    for (p, r) in reward_dict
+        if r == 1
+            @assert agent.trajectory[:action][p,end] == 5
+        end
+    end
+
+
+    pol = agent.policy
+    println("$(pol.update_step) $(pol.update_freq)")
+    if pol.update_step % pol.update_freq == pol.update_freq - 1
+        println("called")
+        state_dict = state(env, players)
+        states = ecat([state_dict[z] for z in players]...)
+        push!(agent.trajectory[:state], states)
+    end
+
+    push!(agent.trajectory[:reward],   rew_mat)
+    push!(agent.trajectory[:terminal], term_mat)
+
+    t = agent.trajectory
+    println("-------")
+    println(size(t[:action]))
+    println(size(t[:reward]))
+    @assert unique(
+            t[:action][:,:][findall(x->x>0,t[:reward])]) in ([],[5])
     # println(agent.trajectory[:action][:,end])
     # println(agent.trajectory[:reward][:,end])
 end
+
+
+#function update_trajectory!(
+#    agent::Agent,
+#    ::AbstractEnv,
+#    ::PreEpisodeStage,
+#)
+#    if length(agent.trajectory) > 0
+#        # println(agent.trajectory[:action][:,end])
+#        # println(agent.trajectory[:state][:,:,:,:,end] == agent.trajectory[:state][:,:,:,:,end-1])
+#        # pop!(agent.trajectory[:state])
+#        # pop!(agent.trajectory[:action])
+#        if haskey(agent.trajectory, :legal_actions_mask)
+#            pop!(agent.trajectory[:legal_actions_mask])
+#        end
+#        #println(agent.trajectory[:action][:,end])
+#    end
+#end
+
+
+
 
 # function RLBase.update!(
 #     trajectory::AbstractTrajectory,

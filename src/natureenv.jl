@@ -41,17 +41,13 @@ RLBase.state_space(env::NatureEnv,::Observation{Any}, player::Int) = env.observa
 RLBase.action_space(env::NatureEnv, player::Int) = Base.OneTo(4 + 2env.food_types)
 RLBase.reward(env::NatureEnv, player::Int) = sum(fc for fc in env.players[player].food_counts)
 
-RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == 100
-RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
-function RLBase.is_terminated(env::NatureEnv)
-    if all(is_terminated(env, p) for p in keys(env.players)) ||
-        (unique(sum(env.food_frames))) == [0] ||
-        env.step == 100
-        return true
-    else
-        return false
-    end
+# Alg check
+function RLBase.is_terminated(env::NatureEnv, player::Int)
+    env.step == 100 || unique(sum(env.food_frames)) == [0]
 end
+RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
+# Environment check
+RLBase.is_terminated(env::NatureEnv) = all(is_terminated(env, p) for p in keys(env.players))
 function RLBase.reset!(env::NatureEnv)
     # Add Food according to each generator
     env.step=0
