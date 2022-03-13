@@ -22,7 +22,7 @@ function RL.Experiment(
 
 
     N_STARTING_PLAYERS = 8
-    UPDATE_FREQ = 200
+    UPDATE_FREQ = 100
     OBS_SIZE = (32, 32, 3)
     clip = 0.1f0
 
@@ -94,7 +94,7 @@ function RL.Experiment(
             actor_loss_weight = 1.0f0,
             critic_loss_weight = 0.5f0,
             entropy_loss_weight = 0.001f0,
-            update_freq = UPDATE_FREQ*N_STARTING_PLAYERS,
+            update_freq = UPDATE_FREQ,
         )
     end
 

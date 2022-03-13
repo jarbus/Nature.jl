@@ -39,16 +39,20 @@ function (π::MultiPPOManager)(stage::PreActStage, env::AbstractEnv, actions)
     # update each agent's trajectory.
     for (agent, players) in π.agents_inv
         update_trajectory!(agent, env, stage, actions, players)
-        # if agent.policy.update_step % agent.policy.update_freq == 0
-        #     @infiltrate
-        # end
-        update!(agent.policy, agent.trajectory, env, stage)
+        RLBase.update!(agent.policy, agent.trajectory, env, stage)
     end
 end
 
 
 function (π::MultiPPOManager)(stage::PostActStage, env::AbstractEnv)
     # only need to update trajectory.
+    for (agent, players) in π.agents_inv
+        update_trajectory!(agent, env, stage, players)
+    end
+end
+
+function (π::MultiPPOManager)(stage::PreEpisodeStage, env::AbstractEnv)
+    # collect state and a dummy action to each agent's trajectory here.
     for (agent, players) in π.agents_inv
         update_trajectory!(agent, env, stage, players)
     end
@@ -65,6 +69,20 @@ end
 function update_trajectory!(
     agent::Agent,
     env::AbstractEnv,
+    ::PreEpisodeStage,
+    players::Vector{Int}
+)
+    t = agent.trajectory
+    if length(t) > 1
+        pop!(t[:state])
+        pop!(t[:action])
+        pop!(t[:action_log_prob])
+    end
+end
+
+function update_trajectory!(
+    agent::Agent,
+    env::AbstractEnv,
     ::PostEpisodeStage,
     players::Vector{Int}
 )
@@ -72,12 +90,16 @@ function update_trajectory!(
     # stored in a SARSA format, which means we still need to generate a dummy
     # action at the end of an episode.
 
-    state_dict = state(env, players)
-    states = ecat([state_dict[p] for p in players]...)
-    actions = [RLCore.get_dummy_action(action_space(env, p)) for p in players]
+    state_dict      = state(env, players)
+    states          = ecat([state_dict[p] for p in players]...)
+    actions         = [RLCore.get_dummy_action(action_space(env, p)) for p in players]
+    action_log_prob = [0.0 for p in players]
 
-    push!(agent.trajectory[:state], states)
-    push!(agent.trajectory[:action], actions)
+    push!(agent.trajectory;
+          state           = states,
+          action          = actions,
+          action_log_prob = action_log_prob,)
+
     # if haskey(trajectory, :legal_actions_mask)
     #     lasm =
     #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
@@ -99,7 +121,7 @@ function update_trajectory!(
     push!(agent.trajectory;
           state           = ecat([state_dict[p] for p in players]...),
           action          = ecat([actions[p].action for p in players]...),
-          action_log_prob = ecat([actions[p].action for p in players]...))
+          action_log_prob = ecat([actions[p].meta.action_log_prob[1] for p in players]...))
     # if haskey(agent.trajectory, :legal_actions_mask)
     #     lasm =
     #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
@@ -115,9 +137,17 @@ function update_trajectory!(
     ::PostActStage,
     players::Vector{Int}
 )
+
     reward_dict = reward(env, players)
+    t = agent.trajectory
     term_dict = is_terminated(env, players)
-    push!(agent.trajectory[:reward],   ecat([reward_dict[p] for p in players]...))
+
+    # println(agent.policy.update_step)
+    # println(t[:action][:,1:length(t)][t[:reward] .> 0])
+    # println(length(t))
+    # println(size(t[:action]))
+    # @infiltrate !(unique(t[:action][:,1:length(t)][t[:reward] .> 0]) in ([],[5]))
+    push!(agent.trajectory[:reward], ecat([reward_dict[p] for p in players]...))
     push!(agent.trajectory[:terminal], ecat([term_dict[p]   for p in players]...))
     # println(agent.trajectory[:action][:,end])
     # println(agent.trajectory[:reward][:,end])
