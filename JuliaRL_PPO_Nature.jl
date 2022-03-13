@@ -22,7 +22,7 @@ function RL.Experiment(
 
 
     N_STARTING_PLAYERS = 8
-    UPDATE_FREQ = 100
+    UPDATE_FREQ = 128
     OBS_SIZE = (32, 32, 3)
     clip = 0.1f0
 

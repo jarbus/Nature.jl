@@ -58,7 +58,7 @@ function RLBase.reset!(env::NatureEnv)
     env.food_frames = []
     for type in 1:env.food_types
         push!(env.food_frames, make_frame(size(env)...))
-        for nf::Tuple in new_food(env.food_generators[type], 100)
+        for nf::Tuple in new_food(env.food_generators[type], 20)
             env.food_frames[type][nf...] += 1
         end
     end
