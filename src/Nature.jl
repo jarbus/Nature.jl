@@ -1,6 +1,5 @@
 # Write tests
 # Batch normalization may be needed once more food is collected and traded
-# TODO Single agent collects food
 module Nature
 
 using ReinforcementLearning
@@ -11,8 +10,8 @@ using LinearAlgebra
 using StableRNGs
 using Random
 using Flux
-using Plots
 using Infiltrator
+using GLMakie
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 

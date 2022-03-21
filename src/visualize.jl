@@ -1,24 +1,52 @@
-function visualize(env::NatureEnv)
-    unicodeplots()
+# function visualize(env::NatureEnv)
+#     unicodeplots()
 
-    scatter()
-    food_vecs = [Tuple.(indices(sp)) for sp in env.food_frames]
-    food_colors = [:orange for _ in 1:env.food_types]
-    agent_colors = [:red for _ in 1:length(env.players)]
-    for (ft, (fv, color)) in enumerate(zip(food_vecs, food_colors))
-        scatter!(fv,c=color, label="f$ft")
-    end
-    for (p, color) in zip(keys(env.players), agent_colors)
-        scatter!(env.players[p].pos,c=color, label="a$p", markershape=:square)
-    end
-    scatter!(xlim=(1,32), ylim=(1,32))
-end
+#     scatter()
+#     food_vecs = [Tuple.(indices(sp)) for sp in env.food_frames]
+#     food_colors = [:orange for _ in 1:env.food_types]
+#     agent_colors = [:red for _ in 1:length(env.players)]
+#     for (ft, (fv, color)) in enumerate(zip(food_vecs, food_colors))
+#         scatter!(fv,c=color, label="f$ft")
+#     end
+#     for (p, color) in zip(keys(env.players), agent_colors)
+#         scatter!(env.players[p].pos,c=color, label="a$p", markershape=:square)
+#     end
+#     scatter!(xlim=(1,32), ylim=(1,32))
+# end
 
 function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager}
     reset!(env)
-    while !is_terminated(env)
+
+    get_player_poses() = [p.pos for p in env.players]
+    get_food_poses() = [(x, y) for (x, y, _) in zip(findnz(env.food_frames[1])...)]
+
+    player_poses = []
+    food_poses = []
+
+    nframes = 80
+    frame = 0
+
+    while !is_terminated(env) && frame < nframes
         env |> policy |> env
-        display(visualize(env))
-        sleep(0.1)
+        push!(player_poses, get_player_poses())
+        push!(food_poses, get_food_poses())
+        frame += 1
     end
+
+
+    fig = Figure()
+    ax  = Axis(fig[1,1])
+    sl_t = Slider(fig[2, 1], range = 0:1:frame, startvalue = 1)
+    pps = @lift player_poses[$(sl_t.value)]
+    fps = @lift food_poses[$(sl_t.value)]
+    GLMakie.scatter!(pps, color=:pink, markersize=60)
+    GLMakie.scatter!(fps, color=:green, markersize=40)
+    limits!(ax, 0, env.observation_size[1], 0, env.observation_size[2])
+
+    display(fig)
+    nothing
 end
+
+
+
+
