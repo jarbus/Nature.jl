@@ -7,9 +7,17 @@ using Nature
 using TensorBoardLogger, Logging
 using Infiltrator
 using SparseArrays
+using Dates
+using Serialization
 
 MAX_STEPS=1_000_000
 
+N_STARTING_PLAYERS = 8
+UPDATE_FREQ = 128
+OBS_SIZE = (32, 32, 3)
+clip = 0.1f0
+
+timestamp = Dates.format(now(),"yyyy-mm-dd HH:MM:SS")
 
 function RL.Experiment(
     ::Val{:JuliaRL},
@@ -20,13 +28,7 @@ function RL.Experiment(
     seed = 123,
 )
 
-
-    N_STARTING_PLAYERS = 8
-    UPDATE_FREQ = 128
-    OBS_SIZE = (32, 32, 3)
-    clip = 0.1f0
-
-    lg=TBLogger("tensorboard_logs/run clip=$clip uf=$UPDATE_FREQ")
+    lg=TBLogger("tensorboard_logs/run $timestamp clip=$clip uf=$UPDATE_FREQ maxsteps=$MAX_STEPS")
     global_logger(lg)
 
 
@@ -34,7 +36,7 @@ function RL.Experiment(
     env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
                     observation_size=OBS_SIZE,
                     food_generators=[
-                        FoodGen([15,15],[20,20]),
+                        FoodGen([15,15],[30,30]),
                        ])
     Nature.reset!(env)
     ns, na = size(state(env, 1)), length(action_space(env,1))
@@ -122,4 +124,5 @@ end
 
 ex = E`JuliaRL_PPO_Nature`
 run(ex)
+serialize("policies/policy $timestamp clip=$clip uf=$UPDATE_FREQ maxsteps=$MAX_STEPS.jls", ex.policy)
 # step_through_env(ex.env, policy)
