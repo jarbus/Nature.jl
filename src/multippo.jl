@@ -20,7 +20,6 @@ function (π::MultiPPOManager)(env::AbstractEnv)
         dists = prob(agent.policy, states, nothing)
 
         for (p, dist) in zip(players, dists)
-            @assert length(dists[p].p) >= 6 && length(dists[p].p) % 2 == 0
             action = rand.(agent.policy.rng, dist)
             if ndims(action) == 2
                 action_log_prob = sum(logpdf.(dist, action), dims = 1)
@@ -73,7 +72,7 @@ function update_trajectory!(
     players::Vector{Int}
 )
     t = agent.trajectory
-    if length(t) > 1
+    if length(t) > 0
         pop!(t[:state])
         pop!(t[:action])
         pop!(t[:action_log_prob])
