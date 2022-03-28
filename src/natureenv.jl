@@ -76,7 +76,7 @@ function sparse_state(env::NatureEnv, player::Int)
             other_frame[env.players[i].pos...] = 1
         end
     end
-    [self_frame, other_frame, env.food_frames...]
+    [self_frame, other_frame, (env.food_frames ./ 255)...]
 end
 
 function RLBase.state(env::NatureEnv, player::Int)

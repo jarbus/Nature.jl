@@ -4,8 +4,6 @@ mutable struct MultiPPOManager <: AbstractPolicy
     agents::Dict{Int, Agent}
     agents_inv::Dict{Agent, Vector{Int}}
     traces
-    batch_size::Int
-    rng::AbstractRNG
 end
 
 Base.getindex(A::MultiPPOManager, x) = getindex(A.agents, x)
@@ -98,13 +96,6 @@ function update_trajectory!(
           state           = states,
           action          = actions,
           action_log_prob = action_log_prob,)
-
-    # if haskey(trajectory, :legal_actions_mask)
-    #     lasm =
-    #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
-    #         legal_action_space_mask(env)
-    #     push!(trajectory[:legal_actions_mask], lasm)
-    # end
 end
 
 
@@ -121,12 +112,6 @@ function update_trajectory!(
           state           = ecat([state_dict[p] for p in players]...),
           action          = ecat([actions[p].action for p in players]...),
           action_log_prob = ecat([actions[p].meta.action_log_prob[1] for p in players]...))
-    # if haskey(agent.trajectory, :legal_actions_mask)
-    #     lasm =
-    #         policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
-    #         legal_action_space_mask(env)
-    #     push!(agent.trajectory[:legal_actions_mask], lasm)
-    # end
 end
 
 
@@ -136,94 +121,8 @@ function update_trajectory!(
     ::PostActStage,
     players::Vector{Int}
 )
-
     reward_dict = reward(env, players)
-    t = agent.trajectory
     term_dict = is_terminated(env, players)
-
-    # println(agent.policy.update_step)
-    # println(t[:action][:,1:length(t)][t[:reward] .> 0])
-    # println(length(t))
-    # println(size(t[:action]))
-    # @infiltrate !(unique(t[:action][:,1:length(t)][t[:reward] .> 0]) in ([],[5]))
     push!(agent.trajectory[:reward], ecat([reward_dict[p] for p in players]...))
     push!(agent.trajectory[:terminal], ecat([term_dict[p]   for p in players]...))
-    # println(agent.trajectory[:action][:,end])
-    # println(agent.trajectory[:reward][:,end])
 end
-
-# function RLBase.update!(
-#     trajectory::AbstractTrajectory,
-#     policy::AbstractPolicy,
-#     env::AbstractEnv,
-#     ::PostEpisodeStage,
-# )
-#     # Note that for trajectories like `CircularArraySARTTrajectory`, data are
-#     # stored in a SARSA format, which means we still need to generate a dummy
-#     # action at the end of an episode.
-
-#     s = policy isa NamedPolicy ? state(env, nameof(policy)) : state(env)
-
-#     action_space = policy isa NamedPolicy ? action_space(env, nameof(policy)) : action_space(env)
-#     a = get_dummy_action(action_space)
-
-#     push!(trajectory[:state], s)
-#     push!(trajectory[:action], a)
-#     if haskey(trajectory, :legal_actions_mask)
-#         lasm =
-#             policy isa NamedPolicy ? legal_action_space_mask(env, nameof(policy)) :
-#             legal_action_space_mask(env)
-#         push!(trajectory[:legal_actions_mask], lasm)
-#     end
-# end
-
-# function RLBase.update!(
-#     p::PPOPolicy,
-#     t::Union{PPOTrajectory,MaskedPPOTrajectory},
-#     ::AbstractEnv,
-#     ::PreActStage,
-# )
-#     length(t) == 0 && return  # in the first update, only state & action are inserted into trajectory
-#     p.update_step += 1
-#     if p.update_step % p.update_freq == 0
-#         RLBase._update!(p, t)
-#     end
-# end
-# function RLBase.update!(
-#     trajectory::Union{PPOTrajectory,MaskedPPOTrajectory},
-#     ::PPOPolicy,
-#     env::MultiThreadEnv,
-#     ::PreActStage,
-#     player::Int,
-#     action::EnrichedAction,
-# )
-#     push!(
-#         trajectory;
-#         state = state(env, player),
-#         action = action.action,
-#         action_log_prob = action.meta.action_log_prob,
-#     )
-
-#     if trajectory isa MaskedPPOTrajectory
-#         push!(trajectory; legal_actions_mask = legal_action_space_mask(env))
-#     end
-# end
-
-# function RLBase.prob(p::PPOPolicy, env::NatureEnv, player::Int)
-#     s = state(env, player)
-#     s = Flux.unsqueeze(s, ndims(s) + 1)
-#     mask =  ActionStyle(env) === FULL_ACTION_SET ? legal_action_space_mask(env) : nothing
-#     prob(p, s, mask)
-# end
-
-# function (p::PPOPolicy)(env::AbstractEnv, player::Int)
-#     dist =  prob(p, env, player)
-#     action = rand.(p.rng,dist)
-#     if ndims(action) == 2
-#         action_log_prob = sum(logpdf.(dist, action), dims = 1)
-#     else
-#         action_log_prob = logpdf.(dist, action)
-#     end
-#     a = EnrichedAction(action; action_log_prob = vec(action_log_prob))
-#     a
-# end

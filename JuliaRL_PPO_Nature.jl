@@ -12,9 +12,9 @@ using Serialization
 
 MAX_STEPS=1_000_000
 
-N_STARTING_PLAYERS = 8
-UPDATE_FREQ = 128
-OBS_SIZE = (32, 32, 3)
+N_STARTING_PLAYERS = 36
+UPDATE_FREQ = 36
+OBS_SIZE = (64, 64, 3)
 clip = 0.1f0
 
 timestamp = Dates.format(now(),"yyyy-mm-dd HH:MM:SS")
@@ -28,15 +28,13 @@ function RL.Experiment(
     seed = 123,
 )
 
-    lg=TBLogger("tensorboard_logs/run $timestamp clip=$clip uf=$UPDATE_FREQ maxsteps=$MAX_STEPS")
-    global_logger(lg)
-
 
     rng = StableRNG(seed)
     env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
                     observation_size=OBS_SIZE,
                     food_generators=[
-                        FoodGen([15,15],[30,30]),
+                        FoodGen([15,15],[20,20]),
+                        FoodGen([45,45],[20,20]),
                        ])
     Nature.reset!(env)
     ns, na = size(state(env, 1)), length(action_space(env,1))
@@ -112,17 +110,20 @@ function RL.Experiment(
         agent_map,
         agent_inv_map,
         PPOTrajectory, # trace's type
-        512, # batch_size
-        rng
     )
 
     stop_condition = StopAfterStep(MAX_STEPS, is_show_progress=!haskey(ENV, "CI"))
     hook = NatureHook(env)
     Experiment(agents, env, stop_condition, hook, "# PPO with Nature")
 
+
+    trial_id = "$timestamp clip=$clip uf=$UPDATE_FREQ maxsteps=$MAX_STEPS obs=$(OBS_SIZE[1:2]) nf=$(length(env.food_generators))"
+    lg=TBLogger("tensorboard_logs/$trial_id")
+    global_logger(lg)
+
 end
 
 ex = E`JuliaRL_PPO_Nature`
 run(ex)
-serialize("policies/policy $timestamp clip=$clip uf=$UPDATE_FREQ maxsteps=$MAX_STEPS.jls", ex.policy)
+serialize("policies/$trial_id.jls", ex.policy)
 # step_through_env(ex.env, policy)

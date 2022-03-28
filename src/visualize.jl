@@ -38,7 +38,7 @@ function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager
     fig = Figure()
     ax  = Axis(fig[1,1])
     limits!(ax, 0, env.observation_size[1], 0, env.observation_size[2])
-    sl_t = Slider(fig[2, 1], range = 0:1:frame, startvalue = 1)
+    sl_t = Slider(fig[2, 1], range = 1:1:frame, startvalue = 1)
 
     pps = @lift player_poses[$(sl_t.value)]
     GLMakie.scatter!(pps, color=:pink, markersize=60)

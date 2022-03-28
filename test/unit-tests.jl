@@ -26,4 +26,5 @@
         @test !any(Nature.is_terminated(nenv, i) for i in 1:length(nenv.players))
         [Nature.action_space(nenv, i) for i in 1:length(nenv.players)]
     end
+
 end
