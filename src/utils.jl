@@ -1,9 +1,12 @@
-vint = Vector{Int}()
-make_frame(x::Int, y::Int) = sparse(vint, vint, vint, x, y)
+vint = Vector{Int}
+function make_frame(width::Int, height::Int, window::Int)
+    frame = fill(-1f0, width+(2*window), height+(2*window))
+    frame[window+1:end-window,window+1:end-window] .= 0
+    frame
+end
 
 rand_pos(env::NatureEnv) = rand(2) .* size(env) .|> x->ceil(Int,x)
 outofbounds(env::NatureEnv, pos::Tuple{Int, Int}) = !all((1,1) .<= pos .<= size(env))
-indices(sp::SparseMatrixCSC) = findall(!iszero, sp)
 
 ($)(a::Real, b::Real) = a:sign(b):a+b-sign(b)
 
@@ -23,8 +26,3 @@ end
 function clip(x::Union{Tuple,Vector},mins::Tuple,maxes::Tuple)
     Tuple(clamp(args...) for args in zip(x, mins, maxes))
 end
-
-function remove!(matrix::SparseMatrixCSC, args...)
-    SparseArrays.dropstored!(matrix, args...)
-end
-

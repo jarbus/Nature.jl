@@ -5,7 +5,7 @@
         # Write your tests here.
         nenv = NatureEnv(
             num_starting_players=2,
-            observation_size=(32, 32, 4),
+            world_size=(32, 32, 4),
             food_generators=[
                 FoodGen([5,5],[1,1]),
                 FoodGen([25,25],[1,1]),
@@ -22,7 +22,7 @@
     @testset "Test Actions on Small Board" begin
         nenv = NatureEnv(
             num_starting_players=1,
-            observation_size=(1, 1, 3),
+            world_size=(1, 1, 3),
             food_generators=[
                 FoodGen([1,1],[1,1], max_pos=(1,1)),
                ])

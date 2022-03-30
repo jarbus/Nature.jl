@@ -1,21 +1,21 @@
-mutable struct NatureHook9 <: AbstractHook
+mutable struct NatureHook10 <: AbstractHook
     step::Int
-    food_counts::Vector{Int}
+    food_counts::Vector{Float32}
     act_counts::Vector{Int}
     act_probs::Vector{Float32}
     player_acts::Vector{Vector{Int}}
     total_rewards::Vector{Float32}
 end
-function NatureHook9(env::NatureEnv)
+function NatureHook10(env::NatureEnv)
     NatureHook(0,
-        zeros(env.food_types),
+        zeros(Float32, env.food_types),
         zeros(length(action_space(env, 1))),
         Vector{Float32}(),
         [zeros(length(action_space(env, 1))) for i in 1:length(env.players)],
         zeros(length(env.players)),
        )
 end
-NatureHook = NatureHook9
+NatureHook = NatureHook10
 
 function (hook::NatureHook)(::PreActStage, policy, env, action)
     for p in 1:length(env.players)

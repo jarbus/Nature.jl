@@ -15,7 +15,7 @@ using GLMakie
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 
-export NatureEnv, FoodGen, reset!, remove!, visualize, step_through_env, MultiPPOManager, NatureHook, ($)
+export NatureEnv, FoodGen, reset!, remove!, visualize, step_through_env, MultiPPOManager, NatureHook, ($), visualize_food
 include("./structs.jl")
 include("./utils.jl")
 include("./act.jl")

@@ -1,31 +1,26 @@
-# function visualize(env::NatureEnv)
-#     unicodeplots()
-
-#     scatter()
-#     food_vecs = [Tuple.(indices(sp)) for sp in env.food_frames]
-#     food_colors = [:orange for _ in 1:env.food_types]
-#     agent_colors = [:red for _ in 1:length(env.players)]
-#     for (ft, (fv, color)) in enumerate(zip(food_vecs, food_colors))
-#         scatter!(fv,c=color, label="f$ft")
-#     end
-#     for (p, color) in zip(keys(env.players), agent_colors)
-#         scatter!(env.players[p].pos,c=color, label="a$p", markershape=:square)
-#     end
-#     scatter!(xlim=(1,32), ylim=(1,32))
-# end
-
 function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager}
     reset!(env)
 
     get_player_poses() = [p.pos for p in env.players]
-    get_food_poses() = [[(x, y)
-                        for (x, y, _) in zip(findnz(env.food_frames[f])...)]
-                        for f in env.food_types]
+    function get_food_poses()
+        fps = Vector()
+        for f in 1:env.food_types
+            push!(fps, Vector())
+            for pos in CartesianIndices(env.food_frames[f])
+                if env.food_frames[f][pos] > 0f0
+                    push!(fps[f], (Tuple(pos)..., env.food_frames[f][pos]))
+                end
+            end
+        end
+        fps
+    end
 
     player_poses = []
     food_poses = []
-    food_colors = (:green, :orange, :blue, :red)
-    nframes = 80
+    food_color_maps = (
+        (:darkblue, :lightblue),
+        (:yellow, :orange))
+    nframes = 100
     frame = 0
 
     while !is_terminated(env) && frame < nframes
@@ -37,15 +32,16 @@ function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager
 
     fig = Figure()
     ax  = Axis(fig[1,1])
-    limits!(ax, 0, env.observation_size[1], 0, env.observation_size[2])
+    limits!(ax, 0, env.world_size[1], 0, env.world_size[2])
     sl_t = Slider(fig[2, 1], range = 1:1:frame, startvalue = 1)
 
+    for f in 1:env.food_types
+        fps = @lift [(x, y) for (x, y, _) in food_poses[$(sl_t.value)][f]]
+        fvs = @lift [z for (_, _, z) in food_poses[$(sl_t.value)][f]]
+        GLMakie.scatter!(fps,color=fvs, colormap=food_color_maps[f], markersize=40, marker=:rect)
+    end
     pps = @lift player_poses[$(sl_t.value)]
     GLMakie.scatter!(pps, color=:pink, markersize=60)
-    for f in 1:env.food_types
-        fps = @lift food_poses[$(sl_t.value)][f]
-        GLMakie.scatter!(fps, color=food_colors[f], markersize=40)
-    end
 
     display(fig)
     nothing

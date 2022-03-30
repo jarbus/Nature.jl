@@ -1,6 +1,6 @@
 mutable struct Player{F}
     pos::Tuple{Int, Int}
-    food_counts::NTuple{F, Int}
+    food_counts::NTuple{F, Float32}
     dead::Bool
 end
 
@@ -16,8 +16,9 @@ mutable struct NatureEnv{F} <: AbstractEnv
     num_starting_players::Int
     players::Vector{Player{F}}
     food_types::Int
-    food_frames::Vector{SparseMatrixCSC{Int, Int}}
+    food_frames::Vector{Matrix{Float32}}
     food_generators::Vector{FoodGen}
-    observation_size::NTuple{3, Int}
+    world_size::NTuple{3, Int}
+    window::Int
     observation_space::Space{Array{ClosedInterval{Int}, 3}}
 end

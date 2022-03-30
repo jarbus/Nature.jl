@@ -1,9 +1,10 @@
 # SparseArrays.dropstored!
-size(env::NatureEnv) = env.observation_size[1:2]
+size(env::NatureEnv) = env.world_size[1:2]
 
 function NatureEnv(;
         num_starting_players=2,
-        observation_size=(32, 32, 4),
+        world_size=(32, 32, 4),
+        window=3,
         food_generators=[
             FoodGen([5,5],[1,1]),
             FoodGen([25,25],[1,1]),
@@ -13,8 +14,8 @@ function NatureEnv(;
 
     observation_space = Space(
         ClosedInterval.(
-            fill(typemin(Int), observation_size),
-            fill(typemax(Int), observation_size)
+            fill(typemin(Int), world_size),
+            fill(typemax(Int), world_size)
         )
     )
 
@@ -23,9 +24,10 @@ function NatureEnv(;
         num_starting_players,
         [],
         num_food_types,
-        Vector{SparseMatrixCSC{Int, Int}}(),
+        Vector{Matrix{Float32}}(),
         food_generators,
-        observation_size,
+        world_size,
+        window,
         observation_space
        )
 end
@@ -39,7 +41,7 @@ RLBase.reward(env::NatureEnv, players::Vector{Int}) = Dict(p=>reward(env, p) for
 
 RLBase.state_space(env::NatureEnv,::Observation{Any}, player::Int) = env.observation_space
 RLBase.action_space(env::NatureEnv, player::Int) = Base.OneTo(4 + 2env.food_types)
-RLBase.reward(env::NatureEnv, player::Int) = sum(fc for fc in env.players[player].food_counts)
+RLBase.reward(env::NatureEnv, player::Int) = sum(log(fc+1) for fc in env.players[player].food_counts)
 
 RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == 100
 RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
@@ -57,32 +59,36 @@ function RLBase.reset!(env::NatureEnv)
     env.step=0
     env.food_frames = []
     for type in 1:env.food_types
-        push!(env.food_frames, make_frame(size(env)...))
-        for nf::Tuple in new_food(env.food_generators[type], 20)
-            env.food_frames[type][nf...] += 1
+        push!(env.food_frames, zeros(Float32, size(env)...))
+        for nf::Tuple in new_food(env.food_generators[type], 10000)
+            env.food_frames[type][nf...] += 0.1f0
         end
     end
 
     env.players = [Player(rand_pos(env)...,env.food_types) for _ in 1:env.num_starting_players]
 end
 
-function sparse_state(env::NatureEnv, player::Int)
-    self_frame = make_frame(size(env)...)
-    other_frame = make_frame(size(env)...)
+function RLBase.state(env::NatureEnv, player::Int)
+    w = env.window
+    px, py = env.players[player].pos
+    self_frame = make_frame(size(env)..., w)
+    other_frame = make_frame(size(env)..., w)
     for i in 1:length(env.players)
         if i == player
-            self_frame[env.players[i].pos...] = 1
+            self_frame[(w .+ env.players[i].pos)...] = 1
         else
-            other_frame[env.players[i].pos...] = 1
+            other_frame[(w .+ env.players[i].pos)...] = 1
         end
     end
-    [self_frame, other_frame, (env.food_frames ./ 255)...]
-end
-
-function RLBase.state(env::NatureEnv, player::Int)
-    frames = sparse_state(env, player) .|> Matrix{Float32}
+    food_frames = []
+    for env_food_frame in env.food_frames
+        ff = make_frame(size(env)..., w)
+        ff[w+1:end-w,w+1:end-w] = env_food_frame ./ 10f0
+        push!(food_frames, ff)
+    end
+    frames = [self_frame, other_frame, food_frames...]
     frames = cat(frames..., dims=3)
-    frames
+    frames[px:px+(2*w), py:py+(2*w), :]
 end
 
 function (env::NatureEnv)(actions::Dict)

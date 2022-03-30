@@ -3,7 +3,7 @@
 function FoodGen(mean::Vector{<:Real},
         std::Vector{<:Real};
         min_pos=(1,1),
-        max_pos=(32,32))
+        max_pos=(64,64))
     FoodGen(min_pos, max_pos, MvNormal(mean, diagm(std)))
 end
 

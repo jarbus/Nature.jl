@@ -26,3 +26,7 @@ function move_and_collect(env::NatureEnv, p::Int, ft::Int)
         end
     end
 end
+
+function visualize_food(env::NatureEnv)
+    sparse(sum(env.food_frames))
+end
