@@ -31,20 +31,13 @@ function (hook::NatureHook)(::PostActStage, policy, env)
         hook.food_counts = hook.food_counts .+ env.players[p].food_counts
     end
 
-    # hook_rew = [Float32(reward(env, p)) for p in 1:length(env.players)]
-    # traj_rew =  vec(policy.agents[1].trajectory[:reward][:, end]')
-    # @assert hook_rew == traj_rew
-
-
-
 end
 
 
-function (hook::NatureHook)(::PreExperimentStage, policy, env)
-    @info "delta_prob" delta_prob=0                            log_step_increment=0
-    @info "rewards"    rew=Tuple(zeros(length(env.players)))   log_step_increment=0
-    @info "advantages" adv_avg=0                               log_step_increment=1
-end
+# function (hook::NatureHook)(::PreExperimentStage, policy, env)
+#     @info "delta_prob" delta_prob=0                            log_step_increment=0
+#     @info "advantages" adv_avg=0                               log_step_increment=1
+# end
 
 function (hook::NatureHook)(::PostEpisodeStage, policy, env)
 
@@ -52,6 +45,7 @@ function (hook::NatureHook)(::PostEpisodeStage, policy, env)
     @info "total_food"  total_food=Tuple(hook.food_counts) log_step_increment=0
     @info "actions"     act=Tuple(hook.act_counts)         log_step_increment=0
     @info "rewards"     reward=Tuple(hook.total_rewards)   log_step_increment=0
+    @info "rewards"     total_reward=sum(hook.total_rewards)
     @info "act_prob"    act_prob=mean(hook.act_probs)      log_step_increment=0
     @info "player_acts" player_acts=Tuple([Tuple(hook.player_acts[p]) for p in 1:length(env.players)])
 

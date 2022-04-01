@@ -5,6 +5,7 @@ function make_frame(width::Int, height::Int, window::Int)
     frame
 end
 
+
 rand_pos(env::NatureEnv) = rand(2) .* size(env) .|> x->ceil(Int,x)
 outofbounds(env::NatureEnv, pos::Tuple{Int, Int}) = !all((1,1) .<= pos .<= size(env))
 

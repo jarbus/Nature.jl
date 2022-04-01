@@ -1,6 +1,6 @@
 # SparseArrays.dropstored!
 
-function FoodGen(mean::Vector{<:Real},
+function FoodGen1(mean::Vector{<:Real},
         std::Vector{<:Real};
         min_pos=(1,1),
         max_pos=(64,64))

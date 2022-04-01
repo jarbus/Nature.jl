@@ -1,7 +1,7 @@
 function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager}
     reset!(env)
 
-    get_player_poses() = [p.pos for p in env.players]
+    get_player_poses() = [p.pos for p in env.players if !p.dead]
     function get_food_poses()
         fps = Vector()
         for f in 1:env.food_types

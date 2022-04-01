@@ -16,12 +16,13 @@ function food(env::NatureEnv, p::Int, idx::Int)
     fframe   = env.food_frames[food_type]
     player   = env.players[p]
     num_food = fframe[player.pos...]
+    place_amount = 0.1
 
     if pick && num_food > 0
         player.food_counts = player.food_counts .+ Tuple(num_food * onehot(food_type, env.food_types))
         fframe[player.pos...] = 0
-    elseif place && player.food_counts[food_type] > 0
-        player.food_counts = Tuple(player.food_counts .- onehot(food_type, env.food_types))
-        # fframe[player.pos...] += 1
+    elseif place && player.food_counts[food_type] >= place_amount
+        player.food_counts = Tuple(player.food_counts .-  (place_amount .* onehot(food_type, env.food_types)))
+        fframe[player.pos...] += place_amount
     end
 end

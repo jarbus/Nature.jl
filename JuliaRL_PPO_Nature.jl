@@ -9,11 +9,11 @@ using Infiltrator
 using Dates
 using Serialization
 
-MAX_STEPS=100_000
+MAX_STEPS=1_000_000
 
 N_STARTING_PLAYERS = 36
 UPDATE_FREQ = 64
-WORLD_SIZE = (64, 64, 3)
+WORLD_SIZE = (64, 64)
 clip = 0.1f0
 
 trial_id = ""
