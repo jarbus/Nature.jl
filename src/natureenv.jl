@@ -1,17 +1,19 @@
 # SparseArrays.dropstored!
 size(env::NatureEnv) = env.world_size[1:2]
 
-function NatureEnv1(;
+function NatureEnv3(;
         num_starting_players=2,
         world_size=(32, 32),
         window=3,
+        max_step=100,
         food_generators=[
             FoodGen([5,5],[1,1]),
             FoodGen([25,25],[1,1]),
            ]) #width, heigh, channels, batch
 
     num_food_types = length(food_generators)
-    num_channels = 2+num_food_types
+    # self, other, x pos, y pos, food_poses, food_counts
+    num_channels = 2+2+num_food_types+num_food_types
 
     observation_space = Space(
         ClosedInterval.(
@@ -20,8 +22,9 @@ function NatureEnv1(;
         )
     )
 
-    NatureEnv{num_food_types}(
+    NatureEnv3{num_food_types}(
         0,
+        max_step,
         num_starting_players,
         [],
         num_food_types,
@@ -52,11 +55,11 @@ function RLBase.reward(env::NatureEnv, player::Int)
     end
 end
 
-RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == 100
+RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == env.max_step
 RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
 function RLBase.is_terminated(env::NatureEnv)
     if all(is_terminated(env, p) for p in keys(env.players)) ||
-        env.step == 100
+        env.step == env.max_step
         return true
     else
         return false
@@ -84,6 +87,7 @@ function RLBase.state(env::NatureEnv, player::Int)
     if env.players[player].dead
         return zeros(Float32, env.obs_size...)
     end
+    # Player frames
     for i in 1:length(env.players)
         if i == player
             self_frame[(w .+ env.players[i].pos)...] = 1
@@ -91,15 +95,27 @@ function RLBase.state(env::NatureEnv, player::Int)
             other_frame[(w .+ env.players[i].pos)...] = 1
         end
     end
+
+    # positions
+    xpos = hcat([i*ones(env.world_size[1]+(2*w)) for i in 1-w:env.world_size[1]+w]...) ./ (env.world_size[1]+w)
+    ypos = vcat([i*ones(1, env.world_size[2]+(2*w)) for i in 1-w:env.world_size[2]+w]...) ./ (env.world_size[2]+w)
+
+    # Food frames
     food_frames = []
     for env_food_frame in env.food_frames
         ff = make_frame(size(env)..., w)
         ff[w+1:end-w,w+1:end-w] = env_food_frame ./ 10f0
         push!(food_frames, ff)
     end
-    frames = [self_frame, other_frame, food_frames...]
+    # Food_counts
+    food_counts = [zeros(Float32, env.obs_size[1:2]) for _ in 1:env.food_types]
+    for f in 1:env.food_types
+        food_counts[f][w+1, w+1] = env.players[player].food_counts[f]
+    end
+    frames = [self_frame, other_frame, xpos, ypos, food_frames...]
     frames = cat(frames..., dims=3)
-    frames[px:px+(2*w), py:py+(2*w), :]
+    frames = frames[px:px+(2*w), py:py+(2*w), :]
+    frames = cat(frames, food_counts..., dims=3)
 end
 
 function (env::NatureEnv)(actions::Dict)
@@ -120,7 +136,7 @@ function (env::NatureEnv)(action::Int, player::Int)
 
     (action in MOVE_RANGE) && move(env, player, action)
     (action in FOOD_RANGE) && food(env, player, action - FOOD_RANGE.start + 1)
-    if max(env.players[player].food_counts...) <= 0f0
+    if min(env.players[player].food_counts...) <= 0f0
         env.players[player].dead = true
     end
     nothing

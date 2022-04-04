@@ -1,7 +1,14 @@
 using Nature
 using Serialization
 
-p = deserialize(readdir("policies/", join=true)[end])
+pols = readdir("policies/")
+for (i, pol) in enumerate(pols)
+    println(i, ". ", pol)
+end
+print("Select a policy: ")
+pol_name = "policies/"*pols[parse(Int, readline())]
+
+p = deserialize(pol_name)
 
 env = NatureEnv(num_starting_players=36,
                 world_size=(64, 64),

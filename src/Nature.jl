@@ -15,7 +15,10 @@ using GLMakie
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 
-export NatureEnv, FoodGen, reset!, remove!, visualize, step_through_env, MultiPPOManager, NatureHook, ($), visualize_food
+export NatureEnv, FoodGen, reset!, remove!, visualize,
+step_through_env, MultiPPOManager, NatureHook, ($),
+visualize_food, change_run, build_MultiPPOManager
+
 include("./structs.jl")
 include("./utils.jl")
 include("./act.jl")
@@ -23,6 +26,7 @@ include("./player.jl")
 include("./food.jl")
 include("./natureenv.jl")
 include("./multippo.jl")
+include("./build-model.jl")
 include("./debug.jl")
 include("./visualize.jl")
 include("./hooks.jl")

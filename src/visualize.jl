@@ -20,7 +20,7 @@ function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager
     food_color_maps = (
         (:darkblue, :lightblue),
         (:yellow, :orange))
-    nframes = 100
+    nframes = 200
     frame = 0
 
     while !is_terminated(env) && frame < nframes
