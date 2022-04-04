@@ -20,7 +20,7 @@ function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager
     food_color_maps = (
         (:darkblue, :lightblue),
         (:yellow, :orange))
-    nframes = 200
+    nframes = env.max_step
     frame = 0
 
     while !is_terminated(env) && frame < nframes
@@ -33,14 +33,17 @@ function step_through_env(env::NatureEnv, policy::T) where {T <: MultiPPOManager
     fig = Figure()
     ax  = Axis(fig[1,1])
     limits!(ax, 0, env.world_size[1], 0, env.world_size[2])
-    sl_t = Slider(fig[2, 1], range = 1:1:frame, startvalue = 1)
+    lsgrid = labelslidergrid!(fig, ["step"], [1:1:frame])
+    fig[2, 1] = lsgrid.layout
+    slider = lsgrid.sliders[1]
+
 
     for f in 1:env.food_types
-        fps = @lift [(x, y) for (x, y, _) in food_poses[$(sl_t.value)][f]]
-        fvs = @lift [z for (_, _, z) in food_poses[$(sl_t.value)][f]]
+        fps = @lift [(x, y) for (x, y, _) in food_poses[$(slider.value)][f]]
+        fvs = @lift [z for (_, _, z) in food_poses[$(slider.value)][f]]
         GLMakie.scatter!(fps,color=fvs, colormap=food_color_maps[f], markersize=40, marker=:rect)
     end
-    pps = @lift player_poses[$(sl_t.value)]
+    pps = @lift player_poses[$(slider.value)]
     GLMakie.scatter!(pps, color=:pink, markersize=60)
 
     display(fig)
