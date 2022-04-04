@@ -126,7 +126,7 @@ end
 
 function (env::NatureEnv)(action::Int, player::Int)
 
-    if max(env.players[player].food_counts...) <= 0f0
+    if env.players[player].dead
         return nothing
     end
     # Players lose 0.1 food per tick, floored at 0
