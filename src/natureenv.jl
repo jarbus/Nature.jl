@@ -100,22 +100,23 @@ function RLBase.state(env::NatureEnv, player::Int)
     xpos = hcat([i*ones(env.world_size[1]+(2*w)) for i in 1-w:env.world_size[1]+w]...) ./ (env.world_size[1]+w)
     ypos = vcat([i*ones(1, env.world_size[2]+(2*w)) for i in 1-w:env.world_size[2]+w]...) ./ (env.world_size[2]+w)
 
-    # Food frames
+    # Food frames and food counts
     food_frames = []
-    for env_food_frame in env.food_frames
+    food_counts = []
+    for (f, env_food_frame) in enumerate(env.food_frames)
         ff = make_frame(size(env)..., w)
+        fc = make_frame(size(env)..., w) .* 0f0
         ff[w+1:end-w,w+1:end-w] = env_food_frame ./ 10f0
+        for p in env.players
+            p.dead && continue
+            fc[w+p.pos[1],w+p.pos[2]] = p.food_counts[f] / 10f0
+        end
         push!(food_frames, ff)
+        push!(food_counts, fc)
     end
-    # Food_counts
-    food_counts = [zeros(Float32, env.obs_size[1:2]) for _ in 1:env.food_types]
-    for f in 1:env.food_types
-        food_counts[f][w+1, w+1] = env.players[player].food_counts[f]
-    end
-    frames = [self_frame, other_frame, xpos, ypos, food_frames...]
+    frames = [self_frame, other_frame, xpos, ypos, food_frames..., food_counts...]
     frames = cat(frames..., dims=3)
     frames = frames[px:px+(2*w), py:py+(2*w), :]
-    frames = cat(frames, food_counts..., dims=3)
 end
 
 function (env::NatureEnv)(actions::Dict)

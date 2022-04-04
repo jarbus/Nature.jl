@@ -57,9 +57,9 @@ function RL.Experiment(
         name = readline()
         if name != ""
             global trial_id = name
-            println("Creating new run: $trial_id")
-            agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
         end
+        agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
+        println("Creating new run: $trial_id")
     else
         global trial_id = runs[parse(Int, trial)]
         println("Resuming run: $trial_id")
