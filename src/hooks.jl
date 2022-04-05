@@ -33,12 +33,6 @@ function (hook::NatureHook)(::PostActStage, policy, env)
 
 end
 
-
-# function (hook::NatureHook)(::PreExperimentStage, policy, env)
-#     @info "delta_prob" delta_prob=0                            log_step_increment=0
-#     @info "advantages" adv_avg=0                               log_step_increment=1
-# end
-
 function (hook::NatureHook)(::PostEpisodeStage, policy, env)
 
     @info "episode"     len=env.step                       log_step_increment=0
@@ -47,7 +41,8 @@ function (hook::NatureHook)(::PostEpisodeStage, policy, env)
     @info "rewards"     reward=Tuple(hook.total_rewards)   log_step_increment=0
     @info "rewards"     total_reward=sum(hook.total_rewards)
     @info "act_prob"    act_prob=mean(hook.act_probs)      log_step_increment=0
-    @info "player_acts" player_acts=Tuple([Tuple(hook.player_acts[p]) for p in 1:length(env.players)])
+    @info "player_acts" player_acts=Tuple([Tuple(hook.player_acts[p]) for p in 1:length(env.players)]) log_step_increment=0
+    @info "exchanges" ex=Tuple(env.exchanges)
 
 
     hook.act_counts    = zeros(length(action_space(env, 1)))

@@ -39,7 +39,7 @@ function RL.Experiment(
                         FoodGen([15,15],[60,60]),
                         FoodGen([45,45],[60,60]),
                        ])
-    Nature.reset!(env)
+    RLBase.reset!(env)
 
 
     global trial_id = "$timestamp clip=$CLIP uf=$UPDATE_FREQ maxsteps=$MAX_STEPS ws=$(WORLD_SIZE[1:2]) nf=$(length(env.food_generators))"
@@ -58,7 +58,7 @@ function RL.Experiment(
         if name != ""
             global trial_id = name
         end
-        agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
+        agents = false
         println("Creating new run: $trial_id")
     else
         global trial_id = runs[parse(Int, trial)]
@@ -76,6 +76,11 @@ function RL.Experiment(
         global_logger(ConsoleLogger())
     end
 
+    # We don't build agents at agents = false because
+    # we don't want to compile between user inputs
+    if agents == false
+        agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
+    end
 
     stop_condition = StopAfterStep(MAX_STEPS, is_show_progress=!haskey(ENV, "CI"))
     hook = NatureHook(env)

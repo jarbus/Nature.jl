@@ -12,6 +12,7 @@ using Random
 using Flux
 using Infiltrator
 using GLMakie
+using DataStructures
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 

@@ -1,7 +1,7 @@
 # SparseArrays.dropstored!
 size(env::NatureEnv) = env.world_size[1:2]
 
-function NatureEnv3(;
+function NatureEnv8(;
         num_starting_players=2,
         world_size=(32, 32),
         window=3,
@@ -22,7 +22,7 @@ function NatureEnv3(;
         )
     )
 
-    NatureEnv3{num_food_types}(
+    NatureEnv8{num_food_types}(
         0,
         max_step,
         num_starting_players,
@@ -33,7 +33,9 @@ function NatureEnv3(;
         world_size,
         window,
         (2*window+1, 2*window+1, num_channels),
-        observation_space
+        observation_space,
+        DefaultDict{NTuple{2, Int}, DefaultDict{Int, Set{Int}}}(DefaultDict{Int, Set{Int}}(Set{Int})),
+        zeros(Float32, num_food_types)
        )
 end
 
@@ -77,6 +79,9 @@ function RLBase.reset!(env::NatureEnv)
     end
 
     env.players = [Player(rand_pos(env)...,env.food_types) for _ in 1:env.num_starting_players]
+
+    env.place_record = DefaultDict{NTuple{2, Int}, DefaultDict{Int, Set{Int}}}(DefaultDict{Int, Set{Int}}(Set{Int}))
+    env.exchanges = zeros(Float32, env.food_types)
 end
 
 function RLBase.state(env::NatureEnv, player::Int)

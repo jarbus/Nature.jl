@@ -12,7 +12,7 @@ struct FoodGen1
 end
 FoodGen = FoodGen1
 
-mutable struct NatureEnv3{F} <: AbstractEnv
+mutable struct NatureEnv8{F} <: AbstractEnv
     # Benchmark bitarray, figure out whether they should be structs or mutable
     step::Int
     max_step::Int
@@ -25,5 +25,9 @@ mutable struct NatureEnv3{F} <: AbstractEnv
     window::Int
     obs_size::NTuple{3, Int}
     observation_space::Space{Array{ClosedInterval{Int}, 3}}
+    place_record::DefaultDict{
+                    NTuple{2, Int},
+                    DefaultDict{Int, Set{Int}}}
+    exchanges::Vector{Float32}
 end
-NatureEnv = NatureEnv3
+NatureEnv = NatureEnv8
