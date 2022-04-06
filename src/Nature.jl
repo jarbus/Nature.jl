@@ -19,7 +19,7 @@ import ReinforcementLearning.RLZoo: EnrichedAction
 
 export NatureEnv, FoodGen, reset!, remove!, visualize,
 step_through_env, MultiPPOManager, NatureHook, ($),
-visualize_food, change_run, build_MultiPPOManager
+visualize_food, change_run, build_MultiPPOManager, PICK_FOOD_1, PLACE_FOOD_1
 
 include("./structs.jl")
 include("./utils.jl")
@@ -32,6 +32,5 @@ include("./build-model.jl")
 include("./debug.jl")
 include("./visualize.jl")
 include("./hooks.jl")
-# Write your package code here.
 
 end

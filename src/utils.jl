@@ -5,6 +5,10 @@ function make_frame(width::Int, height::Int, window::Int)
     frame
 end
 
+small_dd_builder() = DefaultDict{Int, Float32}(0f0)
+big_dd_builder() = DefaultDict{Int, DefaultDict{Int, Float32}}(()->small_dd_builder())
+bigger_dd_builder() = DefaultDict{NTuple{2, Float32}, DefaultDict{Int, DefaultDict{Int, Float32}}}(()->big_dd_builder())
+
 function change_run()
     runs = readdir("tensorboard_logs/")
     for (i, run) in enumerate(runs)
