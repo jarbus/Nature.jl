@@ -9,7 +9,7 @@ using Infiltrator
 using Dates
 using Serialization
 
-MAX_STEPS=200_000
+MAX_STEPS=1000_000
 
 N_STARTING_PLAYERS = 36
 UPDATE_FREQ = 128
@@ -83,7 +83,7 @@ function RL.Experiment(
     end
 
     stop_condition = StopAfterStep(MAX_STEPS, is_show_progress=!haskey(ENV, "CI"))
-    hook = NatureHook(env)
+    hook = NatureHook(env, trial_id, MAX_STEPS)
 
     Experiment(agents, env, stop_condition, hook, "# PPO with Nature")
 end

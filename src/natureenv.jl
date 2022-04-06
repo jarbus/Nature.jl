@@ -6,6 +6,7 @@ function NatureEnv8(;
         world_size=(32, 32),
         window=3,
         max_step=100,
+        player_starting_food=5f0,
         food_generators=[
             FoodGen([5,5],[1,1]),
             FoodGen([25,25],[1,1]),
@@ -30,6 +31,7 @@ function NatureEnv8(;
         num_food_types,
         Vector{Matrix{Float32}}(),
         food_generators,
+        player_starting_food,
         world_size,
         window,
         (2*window+1, 2*window+1, num_channels),
@@ -78,7 +80,7 @@ function RLBase.reset!(env::NatureEnv)
         end
     end
 
-    env.players = [Player(rand_pos(env)...,env.food_types) for _ in 1:env.num_starting_players]
+    env.players = [Player(rand_pos(env)...,env.food_types, env.player_starting_food) for _ in 1:env.num_starting_players]
 
     env.place_record = DefaultDict{NTuple{2, Int}, DefaultDict{Int, Set{Int}}}(DefaultDict{Int, Set{Int}}(Set{Int}))
     env.exchanges = zeros(Float32, env.food_types)
@@ -102,8 +104,8 @@ function RLBase.state(env::NatureEnv, player::Int)
     end
 
     # positions
-    xpos = hcat([i*ones(env.world_size[1]+(2*w)) for i in 1-w:env.world_size[1]+w]...) ./ (env.world_size[1]+w)
-    ypos = vcat([i*ones(1, env.world_size[2]+(2*w)) for i in 1-w:env.world_size[2]+w]...) ./ (env.world_size[2]+w)
+    xpos = hcat([i*ones(Float32, env.world_size[1]+(2*w)) for i in 1-w:env.world_size[1]+w]...) ./ (env.world_size[1]+w)
+    ypos = vcat([i*ones(Float32, 1, env.world_size[2]+(2*w)) for i in 1-w:env.world_size[2]+w]...) ./ (env.world_size[2]+w)
 
     # Food frames and food counts
     food_frames = []
@@ -135,7 +137,7 @@ function (env::NatureEnv)(action::Int, player::Int)
         return nothing
     end
     # Players lose 0.1 food per tick, floored at 0
-    env.players[player].food_counts = env.players[player].food_counts .- 0.1 .|> x->max(x, 0)
+    env.players[player].food_counts = env.players[player].food_counts .- 0.1f0 .|> x->max(x, 0f0)
 
     MOVE_RANGE = 1:4
     FOOD_RANGE = (MOVE_RANGE.stop+1)$(2*env.food_types)

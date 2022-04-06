@@ -1,10 +1,14 @@
+# NOTE: MAKE SURE PLAYER HAS ENOUGH OF EACH TYPE OF FOOD
 # player p moves to and collects food type ft
 function move_and_collect(env::NatureEnv, p::Int, ft::Int)
     fframe = env.food_frames[ft]
-    foods = zip(findnz(fframe)[1:2]...)
+    foods = Tuple.(filter(pos->fframe[pos]>0f0, CartesianIndices(fframe)))
 
     for food in foods
         while true
+            if env.players[p].dead
+                return
+            end
             dir = food .- env.players[p].pos
             dir = dir ./ abs.(dir) |> i->map(y->isnan(y) ? 0 : y,i)
             # Randomly mask x or y if

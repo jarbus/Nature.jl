@@ -1,18 +1,22 @@
 mutable struct NatureHook10 <: AbstractHook
     step::Int
+    max_steps::Int
     food_counts::Vector{Float32}
     act_counts::Vector{Int}
     act_probs::Vector{Float32}
     player_acts::Vector{Vector{Int}}
     total_rewards::Vector{Float32}
+    trial_id::String
 end
-function NatureHook10(env::NatureEnv)
+function NatureHook10(env::NatureEnv, trial_id::String, max_steps::Int)
     NatureHook(0,
+        max_steps,
         zeros(Float32, env.food_types),
         zeros(length(action_space(env, 1))),
         Vector{Float32}(),
         [zeros(length(action_space(env, 1))) for i in 1:length(env.players)],
         zeros(length(env.players)),
+        trial_id,
        )
 end
 NatureHook = NatureHook10
@@ -29,6 +33,10 @@ function (hook::NatureHook)(::PostActStage, policy, env)
     for p in 1:length(env.players)
         hook.total_rewards[p] += reward(env, p)
         hook.food_counts = hook.food_counts .+ env.players[p].food_counts
+    end
+    hook.step += 1
+    if hook.max_steps % hook.step == 10_000
+        serialize("policies/$(hook.trial_id).jls", policy)
     end
 
 end

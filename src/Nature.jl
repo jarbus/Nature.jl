@@ -13,6 +13,7 @@ using Flux
 using Infiltrator
 using GLMakie
 using DataStructures
+using Serialization
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 
