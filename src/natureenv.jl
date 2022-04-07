@@ -10,11 +10,12 @@ function NatureEnv12(;
         food_generators=[
             FoodGen([5,5],[1,1]),
             FoodGen([25,25],[1,1]),
-           ]) #width, heigh, channels, batch
+           ],
+        vocab_size=0) #width, heigh, channels, batch
 
     num_food_types = length(food_generators)
     # self, other, x pos, y pos, food_poses, food_counts
-    num_channels = 2+2+num_food_types+num_food_types
+    num_channels = 2+2+num_food_types+num_food_types+vocab_size
 
     observation_space = Space(
         ClosedInterval.(
@@ -25,7 +26,7 @@ function NatureEnv12(;
     place_records = bigger_dd_builder()
 
     NatureEnv12{num_food_types}(
-        0,
+        1,
         max_step,
         num_starting_players,
         [],
@@ -38,7 +39,9 @@ function NatureEnv12(;
         (2*window+1, 2*window+1, num_channels),
         observation_space,
         place_records,
-        zeros(Float32, num_food_types)
+        zeros(Float32, num_food_types),
+        vocab_size,
+        [[] for _ in 1:max_step]
        )
 end
 
@@ -50,7 +53,7 @@ RLBase.reward(env::NatureEnv, players::Dict{Int,Player}) = Dict(p=>reward(env, p
 RLBase.reward(env::NatureEnv, players::Vector{Int}) = Dict(p=>reward(env, p) for p in players)
 
 RLBase.state_space(env::NatureEnv,::Observation{Any}, player::Int) = env.observation_space
-RLBase.action_space(env::NatureEnv, player::Int) = Base.OneTo(4 + 2env.food_types)
+RLBase.action_space(env::NatureEnv, player::Int) = Base.OneTo(4 + 2env.food_types + env.vocab_size)
 
 function RLBase.reward(env::NatureEnv, player::Int)
     if all(env.players[player].food_counts .> 0f0) && !env.players[player].dead
@@ -72,7 +75,7 @@ function RLBase.is_terminated(env::NatureEnv)
 end
 function RLBase.reset!(env::NatureEnv)
     # Add Food according to each generator
-    env.step=0
+    env.step=1
     env.food_frames = []
     for type in 1:env.food_types
         push!(env.food_frames, zeros(Float32, size(env)...))
@@ -82,6 +85,7 @@ function RLBase.reset!(env::NatureEnv)
     end
 
     env.players = [Player(rand_pos(env)...,env.food_types, env.player_starting_food) for _ in 1:env.num_starting_players]
+    env.comms = [[] for _ in 1:env.max_step]
 
     empty!(env.place_record)
     env.exchanges = zeros(Float32, env.food_types)
@@ -123,7 +127,12 @@ function RLBase.state(env::NatureEnv, player::Int)
         push!(food_frames, ff)
         push!(food_counts, fc)
     end
-    frames = [self_frame, other_frame, xpos, ypos, food_frames..., food_counts...]
+    comm_frames = [make_frame(size(env)...,w) for _ in 1:env.vocab_size]
+    for (x, y, _, symbol) in env.comms[env.step]
+        comm_frames[symbol][w+x,w+y] = 1
+    end
+
+    frames = [self_frame, other_frame, xpos, ypos, food_frames..., food_counts..., comm_frames...]
     frames = cat(frames..., dims=3)
     frames = frames[px:px+(2*w), py:py+(2*w), :]
 end
@@ -143,9 +152,11 @@ function (env::NatureEnv)(action::Int, player::Int)
 
     MOVE_RANGE = 1:4
     FOOD_RANGE = (MOVE_RANGE.stop+1)$(2*env.food_types)
+    VOCAB_RANGE = (FOOD_RANGE.stop+1)$(env.vocab_size+1)
 
     (action in MOVE_RANGE) && move(env, player, action)
     (action in FOOD_RANGE) && food(env, player, action - FOOD_RANGE.start + 1)
+    (action in VOCAB_RANGE) && comm(env, player, action - VOCAB_RANGE.start + 1)
     if min(env.players[player].food_counts...) <= 0f0
         env.players[player].dead = true
     end

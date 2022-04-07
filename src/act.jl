@@ -31,11 +31,10 @@ function food(env::NatureEnv, p::Int, idx::Int)
         env.place_record[player.pos][food_type] = small_dd_builder()    elseif place && player.food_counts[food_type] >= place_amount
         player.food_counts = Tuple(player.food_counts .-  (place_amount .* onehot(food_type, env.food_types)))
         fframe[player.pos...] += place_amount
-        # You need this
-        f_::Float32 = env.place_record[player.pos][food_type][p]
-        env.place_record[player.pos][food_type][p] = f_ + place_amount
+        env.place_record[player.pos][food_type][p] = env.place_record[player.pos][food_type][p] + place_amount
     end
 end
 
 function comm(env::NatureEnv, p::Int, symbol::Int)
+    push!(env.comms[env.step], (env.players[p].pos..., p, symbol))
 end

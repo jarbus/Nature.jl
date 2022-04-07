@@ -29,5 +29,7 @@ mutable struct NatureEnv12{F} <: AbstractEnv
     observation_space::Space{Array{ClosedInterval{Int}, 3}}
     place_record::DefaultDict
     exchanges::Vector{Float32}
+    vocab_size::Int
+    comms::Vector{Vector{Tuple{Int, Int, Int, Int}}}
 end
 NatureEnv = NatureEnv12
