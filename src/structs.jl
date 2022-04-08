@@ -16,7 +16,7 @@ FoodGen = FoodGen1
 mutable struct NatureEnv12{F} <: AbstractEnv
     # Benchmark bitarray, figure out whether they should be structs or mutable
     step::Int
-    max_step::Int
+    episode_len::Int
     num_starting_players::Int
     players::Vector{Player{F}}
     food_types::Int

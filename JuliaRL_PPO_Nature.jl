@@ -9,7 +9,7 @@ using Infiltrator
 using Dates
 using Serialization
 
-MAX_STEPS=1000_000
+MAX_STEPS=1_000_000
 
 N_STARTING_PLAYERS = 36
 UPDATE_FREQ = 128

@@ -89,7 +89,7 @@
         @test state(env, 1)[:,:,COMM_1_CHANNEL][1] == state(env, 2)[:, :, COMM_1_CHANNEL][1] == 0f0
         @test state(env, 1)[:,:,COMM_2_CHANNEL][1] == state(env, 2)[:, :, COMM_2_CHANNEL][1] == 0f0
         RLBase.reset!(env)
-        @test length(env.comms) == env.max_step
+        @test length(env.comms) == env.episode_len
         @test all([isempty(comm_step) for comm_step in env.comms])
     end
 end

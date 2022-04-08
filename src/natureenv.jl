@@ -5,7 +5,7 @@ function NatureEnv12(;
         num_starting_players=2,
         world_size=(32, 32),
         window=3,
-        max_step=100,
+        episode_len=100,
         player_starting_food=5f0,
         food_generators=[
             FoodGen([5,5],[1,1]),
@@ -27,7 +27,7 @@ function NatureEnv12(;
 
     NatureEnv12{num_food_types}(
         1,
-        max_step,
+        episode_len,
         num_starting_players,
         [],
         num_food_types,
@@ -41,7 +41,7 @@ function NatureEnv12(;
         place_records,
         zeros(Float32, num_food_types),
         vocab_size,
-        [[] for _ in 1:max_step]
+        [[] for _ in 1:episode_len]
        )
 end
 
@@ -63,11 +63,11 @@ function RLBase.reward(env::NatureEnv, player::Int)
     end
 end
 
-RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == env.max_step
+RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == env.episode_len
 RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
 function RLBase.is_terminated(env::NatureEnv)
     if all(is_terminated(env, p) for p in keys(env.players)) ||
-        env.step == env.max_step
+        env.step == env.episode_len
         return true
     else
         return false
@@ -85,7 +85,7 @@ function RLBase.reset!(env::NatureEnv)
     end
 
     env.players = [Player(rand_pos(env)...,env.food_types, env.player_starting_food) for _ in 1:env.num_starting_players]
-    env.comms = [[] for _ in 1:env.max_step]
+    env.comms = [[] for _ in 1:env.episode_len]
 
     empty!(env.place_record)
     env.exchanges = zeros(Float32, env.food_types)
