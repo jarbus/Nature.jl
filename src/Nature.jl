@@ -11,7 +11,7 @@ using StableRNGs
 using Random
 using Flux
 using Infiltrator
-using GLMakie
+#using GLMakie
 using DataStructures
 using Serialization
 import Base: size
@@ -30,7 +30,7 @@ include("./natureenv.jl")
 include("./multippo.jl")
 include("./build-model.jl")
 include("./debug.jl")
-include("./visualize.jl")
+#include("./visualize.jl")
 include("./hooks.jl")
 
 end
