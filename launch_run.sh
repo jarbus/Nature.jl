@@ -1,7 +1,7 @@
 menu=/tmp/garbus-runs
 echo "new run" > $menu
 ls --reverse tensorboard_logs >> $menu
-run=$(cat $menu | dmenu -l 20)
+run=$(cat $menu | fzf)
 echo $run
 rm /tmp/garbus-runs
 if [[ $run == "new run" ]]; then
@@ -20,4 +20,7 @@ else
     tb=""
 fi
 
-julia --project=. run-experiment.jl $tb $resume --max-steps=1000 --episode-len=500 "$run"
+cp batch-template.sh batch.sh
+echo "julia --project=. run-experiment.jl $tb $resume --max-steps=1000 --episode-len=500 \"$run\"" >> batch.sh
+sbatch batch.sh
+
