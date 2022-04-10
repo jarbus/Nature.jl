@@ -31,5 +31,7 @@ mutable struct NatureEnv12{F} <: AbstractEnv
     exchanges::Vector{Float32}
     vocab_size::Int
     comms::Vector{Vector{Tuple{Int, Int, Int, Int}}}
+    num_frames::Int
+    past_states::Vector{Vector{Array{Float32, 3}}}
 end
 NatureEnv = NatureEnv12

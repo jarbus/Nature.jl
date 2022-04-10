@@ -51,6 +51,7 @@ env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
                 world_size=WORLD_SIZE,
                 episode_len=args["episode-len"],
                 window=3,
+                num_frames=4,
                 vocab_size=5,
                 food_generators=[
                     FoodGen([15,15],[60,60]),

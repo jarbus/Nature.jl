@@ -6,6 +6,7 @@ function NatureEnv12(;
         world_size=(32, 32),
         window=3,
         episode_len=100,
+        num_frames=4,
         player_starting_food=5f0,
         food_generators=[
             FoodGen([5,5],[1,1]),
@@ -15,12 +16,12 @@ function NatureEnv12(;
 
     num_food_types = length(food_generators)
     # self, other, x pos, y pos, food_poses, food_counts
-    num_channels = 2+2+num_food_types+num_food_types+vocab_size
+    num_channels = num_frames * (2+2+num_food_types+num_food_types+vocab_size)
 
     observation_space = Space(
         ClosedInterval.(
-            fill(typemin(Int), world_size..., num_channels),
-            fill(typemax(Int), world_size..., num_channels)
+            fill(typemin(Int), 2window+1, 2window+1, num_channels),
+            fill(typemax(Int), 2window+1, 2window+1, num_channels)
         )
     )
     place_records = bigger_dd_builder()
@@ -41,7 +42,9 @@ function NatureEnv12(;
         place_records,
         zeros(Float32, num_food_types),
         vocab_size,
-        [[] for _ in 1:episode_len]
+        [[] for _ in 1:episode_len],
+        num_frames,
+        [[] for _ in 1:num_starting_players]
        )
 end
 
@@ -86,6 +89,9 @@ function RLBase.reset!(env::NatureEnv)
 
     env.players = [Player(rand_pos(env)...,env.food_types, env.player_starting_food) for _ in 1:env.num_starting_players]
     env.comms = [[] for _ in 1:env.episode_len]
+    frame_channels = Int(env.obs_size[3] / env.num_frames)
+    env.past_states = [
+        [[zeros(Float32, env.obs_size[1:2]..., frame_channels) for _ in 1:env.num_frames-1]...] for _ in 1:env.num_starting_players]
 
     empty!(env.place_record)
     env.exchanges = zeros(Float32, env.food_types)
@@ -135,6 +141,13 @@ function RLBase.state(env::NatureEnv, player::Int)
     frames = [self_frame, other_frame, xpos, ypos, food_frames..., food_counts..., comm_frames...]
     frames = cat(frames..., dims=3)
     frames = frames[px:px+(2*w), py:py+(2*w), :]
+    if length(env.past_states[player]) == env.num_frames + env.step - 2
+        push!(env.past_states[player], frames)
+    elseif length(env.past_states[player]) == env.num_frames + env.step - 1
+        env.past_states[player][end] = frames
+    end
+    frame_history = cat(env.past_states[player][end-env.num_frames+1:end]..., dims=3)
+    frame_history
 end
 
 function (env::NatureEnv)(actions::Dict)
