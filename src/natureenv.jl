@@ -99,6 +99,9 @@ function RLBase.reset!(env::NatureEnv)
 end
 
 function RLBase.state(env::NatureEnv, player::Int)
+    if env.players[player].dead
+        return zeros(Float32, env.obs_size)
+    end
     w = env.window
     px, py = env.players[player].pos
     self_frame = make_frame(size(env)..., w)
