@@ -1,33 +1,37 @@
 function build_MultiPPOManager(env::NatureEnv, num_starting_players::Int, update_freq::Int, clip::Float32)
     ns, na = size(state(env, 1)), length(action_space(env,1))
 
-    cnn_output_shape = Int.(floor.([ns[1], ns[2],32]))
+    cnn_output_shape = Int.(floor.([ns[1], ns[2], 64]))
     create_actor() = Chain(
-        Conv((3,3), ns[3]=>32, pad=(1,1), relu),
+        Conv((5,5), ns[3]=>64, pad=(2,2), relu),
         # MaxPool((2,2)),
         # Second convolution, operating upon a 14x14 image
-        Conv((3, 3), 32=>32, pad=(1,1), relu),
+        Conv((3, 3), 64=>64, pad=(1,1), relu),
         # MaxPool((2,2)),
         # Third convolution, operating upon a 7x7 image
-        Conv((3, 3), 32=>32, pad=(1,1), relu),
+        Conv((3, 3), 64=>64, pad=(1,1), relu),
         # MaxPool((2,2)),
         flatten,
-        Dense(prod(cnn_output_shape), 64),
-        Dense(64, na)
+        Dense(prod(cnn_output_shape), 1024),
+        Dense(1024, 1024, relu),
+        Dense(1024, 512, relu),
+        Dense(512, na, relu)
     )
 
     create_critic() = Chain(
-        Conv((3,3), ns[3]=>32, pad=(1,1), relu),
+        Conv((5,5), ns[3]=>64, pad=(2,2), relu),
         # MaxPool((2,2)),
         # Second convolution, operating upon a 14x14 image
-        Conv((3, 3), 32=>32, pad=(1,1), relu),
+        Conv((3, 3), 64=>64, pad=(1,1), relu),
         # MaxPool((2,2)),
         # Third convolution, operating upon a 7x7 image
-        Conv((3, 3), 32=>32, pad=(1,1), relu),
+        Conv((3, 3), 64=>64, pad=(1,1), relu),
         # MaxPool((2,2)),
         flatten,
-        Dense(prod(cnn_output_shape), 64),
-        Dense(64, 1)
+        Dense(prod(cnn_output_shape), 1024),
+        Dense(1024, 1024, relu),
+        Dense(1024, 512, relu),
+        Dense(512, 1, relu)
     )
 
     create_trajectory() = PPOTrajectory(;
