@@ -21,6 +21,6 @@ else
 fi
 
 cp batch-template.sh batch.sh
-echo "julia --project=. run-experiment.jl $tb $resume --max-steps=1000 --episode-len=500 \"$run\"" >> batch.sh
+echo "julia --project=. run-experiment.jl $tb $resume --max-steps=2000000 --episode-len=500 \"$run\"" >> batch.sh
 sbatch batch.sh
 

@@ -1,17 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=test
-#SBATCH --output=test.out
+#SBATCH --output=run.out
 #SBATCH --account=guest
 #SBATCH --partition=guest-gpu
-#SBATCH --time=02:00:00
+#SBATCH --time=24:00:00
 #SBATCH --qos=low-gpu
-#SBATCH --gres=gpu:TitanX:1   # Request 1 TitanX GPU
+#SBATCH --gres=gpu:V100:1
  
 # Load modules required for your job
-module load cuda/9.0
-module load anaconda
-echo ". /opt/ohpc/pub/apps/installed/anaconda/5.2/etc/profile.d/conda.sh" >> ~/.bashrc
-source ~/.bashrc
+conda init bash
+source /home/garbus/.bashrc
 conda activate julia
  
 # Command to execute
