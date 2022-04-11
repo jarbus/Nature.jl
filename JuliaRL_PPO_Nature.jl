@@ -33,7 +33,7 @@ function RL.Experiment(
     rng = StableRNG(seed)
     env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
                     world_size=WORLD_SIZE,
-                    max_step=500,
+                    episode_len=500,
                     window=3,
                     vocab_size=5,
                     food_generators=[

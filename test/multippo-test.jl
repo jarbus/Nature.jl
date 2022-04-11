@@ -10,7 +10,9 @@ using Infiltrator
 
     env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
                     world_size=WORLD_SIZE,
-                    max_step=UPDATE_FREQ+1,
+                    episode_len=UPDATE_FREQ+2,
+                    num_frames=4,
+                    window=3,
                     food_generators=[
                         FoodGen([4,4],[30,30], max_pos=WORLD_SIZE[1:2]),
                        ])
@@ -35,7 +37,6 @@ using Infiltrator
         env(action)
         policy(POST_ACT_STAGE, env)
 
-
         a = [action[p].action for p in 1:length(env.players)]
         a = cat(a..., dims=ndims(a[1])+1)
 
@@ -47,17 +48,40 @@ using Infiltrator
         push!(rews, r)
     end
 
+    @testset "Sane policy states" begin
     for i in 1:UPDATE_FREQ
         step()
         @test states[i] == policy.agents[1].trajectory[:state][:,:,:,:,i]
     end
-    @test states[1] == policy.agents[1].trajectory[:state][:,:,:,:,1]
-    @test states[2] == policy.agents[1].trajectory[:state][:,:,:,:,2]
-    @test states[3] == policy.agents[1].trajectory[:state][:,:,:,:,3]
-    # State buffer is one size bigger, so size 3 will be size 4
-    step()
-    step()
-    @test states[2] == policy.agents[1].trajectory[:state][:,:,:,:,1]
-    @test states[3] == policy.agents[1].trajectory[:state][:,:,:,:,2]
-    @test states[4] == policy.agents[1].trajectory[:state][:,:,:,:,3]
+        @test states[1] == policy.agents[1].trajectory[:state][:,:,:,:,1]
+        @test states[2] == policy.agents[1].trajectory[:state][:,:,:,:,2]
+        @test states[3] == policy.agents[1].trajectory[:state][:,:,:,:,3]
+        # State buffer is one size bigger, so size 3 will be size 4
+        step()
+        step()
+        @test states[2] == policy.agents[1].trajectory[:state][:,:,:,:,1]
+        @test states[3] == policy.agents[1].trajectory[:state][:,:,:,:,2]
+        @test states[4] == policy.agents[1].trajectory[:state][:,:,:,:,3]
+    end
+
+    @testset "Frame tests" begin
+        nfc = Int(env.obs_size[3] / env.num_frames) # num frame channels
+
+        # Timestep 1
+        # Test initial zero frames are equal
+        @test all(0f0 .== states[1][:,:,1:3*nfc, :])
+        @test states[1][:,:,1:nfc,:] == states[1][:,:,nfc+1:2nfc,:] == states[1][:,:,2nfc+1:3nfc,:]
+        # Test initial zero frame is not equal to starting frame
+        @test states[1][:,:,2nfc+1:3nfc,:] != states[1][:,:,3nfc+1:end,:]
+
+        # Timestep 2
+        @test states[2][:,:,1:nfc,:] == states[2][:,:,nfc+1:2nfc,:] != states[2][:,:,2nfc+1:3nfc,:]
+        @test states[2][:,:,2nfc+1:3nfc,:] != states[2][:,:,3nfc+1:end,:]
+
+        # Timestep 3
+        @test all(0f0 .== states[3][:,:,1:nfc,:])
+        @test states[3][:,:,1:nfc,:] != states[3][:,:,nfc+1:2nfc,:]
+        @test states[3][:,:,1:nfc,:] != states[3][:,:,nfc+1:2nfc,:]
+        @test states[3][:,:,2nfc+1:3nfc,:] != states[3][:,:,3nfc+1:end,:]
+    end
 end
