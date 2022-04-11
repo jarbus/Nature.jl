@@ -66,11 +66,11 @@ function RLBase.reward(env::NatureEnv, player::Int)
     end
 end
 
-RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step == env.episode_len
+RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step >= env.episode_len
 RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
 function RLBase.is_terminated(env::NatureEnv)
     if all(is_terminated(env, p) for p in keys(env.players)) ||
-        env.step == env.episode_len
+        env.step >= env.episode_len
         return true
     else
         return false
@@ -154,6 +154,7 @@ function RLBase.state(env::NatureEnv, player::Int)
 end
 
 function (env::NatureEnv)(actions::Dict)
+    env.step >= env.episode_len && return nothing
     env.step += 1
     Dict(p=>env(a.action[1], p) for (p, a) in actions)
 end

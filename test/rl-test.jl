@@ -1,6 +1,6 @@
 
 using Infiltrator
-@testset verbose = true "Test MultiPPO" begin
+@testset verbose = true "Test RL Loop" begin
 
     MAX_STEPS=10
     N_STARTING_PLAYERS = 2
@@ -48,7 +48,7 @@ using Infiltrator
         push!(rews, r)
     end
 
-    @testset "Sane policy states" begin
+    @testset "Sane MultiPPO states" begin
     for i in 1:UPDATE_FREQ
         step()
         @test states[i] == policy.agents[1].trajectory[:state][:,:,:,:,i]
@@ -62,6 +62,7 @@ using Infiltrator
         @test states[2] == policy.agents[1].trajectory[:state][:,:,:,:,1]
         @test states[3] == policy.agents[1].trajectory[:state][:,:,:,:,2]
         @test states[4] == policy.agents[1].trajectory[:state][:,:,:,:,3]
+        @test is_terminated(env)
     end
 
     @testset "Frame tests" begin
@@ -77,11 +78,31 @@ using Infiltrator
         # Timestep 2
         @test states[2][:,:,1:nfc,:] == states[2][:,:,nfc+1:2nfc,:] != states[2][:,:,2nfc+1:3nfc,:]
         @test states[2][:,:,2nfc+1:3nfc,:] != states[2][:,:,3nfc+1:end,:]
+        @test states[1][:,:,3nfc+1:end,:] == states[2][:,:,2nfc+1:3nfc,:]
 
         # Timestep 3
         @test all(0f0 .== states[3][:,:,1:nfc,:])
         @test states[3][:,:,1:nfc,:] != states[3][:,:,nfc+1:2nfc,:]
         @test states[3][:,:,1:nfc,:] != states[3][:,:,nfc+1:2nfc,:]
         @test states[3][:,:,2nfc+1:3nfc,:] != states[3][:,:,3nfc+1:end,:]
+        @test states[2][:,:,3nfc+1:end,:] == states[3][:,:,2nfc+1:3nfc,:]
+
+        # Timestep 4
+        @test states[1][:,:,3nfc+1:end,:] == states[4][:,:,1:nfc,:]
+        @test states[2][:,:,3nfc+1:end,:] == states[4][:,:,1nfc+1:2nfc,:]
+        @test states[3][:,:,3nfc+1:end,:] == states[4][:,:,2nfc+1:3nfc,:]
+        @test states[4][:,:,2nfc+1:3nfc,:] != states[4][:,:,3nfc+1:end,:]
+
+        # Timestep 5
+        @test states[1][:,:,3nfc+1:end,:] == states[4][:,:,1:nfc,:]
+        @test states[2][:,:,3nfc+1:end,:] == states[4][:,:,1nfc+1:2nfc,:]
+        @test states[3][:,:,3nfc+1:end,:] == states[4][:,:,2nfc+1:3nfc,:]
+        @test states[4][:,:,2nfc+1:3nfc,:] != states[4][:,:,3nfc+1:end,:]
+        # Last timestep
+        @test states[5][:,:,3nfc+1:end,:] == states[8][:,:,1:nfc,:]
+        @test states[6][:,:,3nfc+1:end,:] == states[8][:,:,1nfc+1:2nfc,:]
+        @test states[7][:,:,3nfc+1:end,:] == states[8][:,:,2nfc+1:3nfc,:]
+        @test states[8][:,:,2nfc+1:3nfc,:] != states[8][:,:,3nfc+1:end,:]
+        @test length(states) == env.step - 1 == env.episode_len == UPDATE_FREQ + 2
     end
 end
