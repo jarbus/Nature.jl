@@ -1,2 +1,5 @@
 /Manifest.toml
+checkpoints/
+outs/
+tensorboard_logs/
 examples/
