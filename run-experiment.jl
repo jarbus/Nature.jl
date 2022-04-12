@@ -28,9 +28,6 @@ function parse_commandline()
             help = "Maximum number of steps to run"
             arg_type = Int
             default = 1_000_000
-        "--resume"
-            help = "an option without argument, i.e. a flag"
-            action = :store_true
         "--tb"
             help = "Log to Tensorboard"
             action = :store_true
@@ -71,14 +68,15 @@ else
     global_logger(ConsoleLogger())
 end
 
-if !args["resume"]
-    println("Creating new run $trial_id")
-    agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
+if ispath("tensorboard_logs/$trial_id")
+    last_step = sort(parse.(Int, readdir("checkpoints/$trial_id/")))[end]
+    last_checkpoint = deserialize("checkpoints/$trial_id/$last_step")
+    global_logger().global_step = last_checkpoint[:tb_step]
+    agents = last_checkpoint[:policy]
 else
-    println("Resuming $trial_id")
-    agents = deserialize("policies/$trial_id.jls")
-    println(agents)
+    agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
 end
+
 
 stop_condition = StopAfterStep(args["max-steps"], is_show_progress=!haskey(ENV, "CI"))
 hook = NatureHook(env, trial_id, args["max-steps"])
@@ -86,4 +84,4 @@ hook = NatureHook(env, trial_id, args["max-steps"])
 ex = Experiment(agents, env, stop_condition, hook, "# PPO with Nature")
 
 run(ex)
-serialize("policies/$trial_id.jls", ex.policy)
+serialize("checkpoints/$trial_id.jls", ex.policy)

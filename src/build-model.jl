@@ -3,10 +3,10 @@ function build_MultiPPOManager(env::NatureEnv, num_starting_players::Int, update
 
     cnn_output_shape = Int.(floor.([ns[1], ns[2], 64]))
     create_actor() = Chain(
-        Conv((5,5), ns[3]=>64, pad=(2,2), relu),
+        Conv((5,5), ns[3]=>128, pad=(2,2), relu),
         # MaxPool((2,2)),
         # Second convolution, operating upon a 14x14 image
-        Conv((3, 3), 64=>64, pad=(1,1), relu),
+        Conv((3, 3), 128=>64, pad=(1,1), relu),
         # MaxPool((2,2)),
         # Third convolution, operating upon a 7x7 image
         Conv((3, 3), 64=>64, pad=(1,1), relu),

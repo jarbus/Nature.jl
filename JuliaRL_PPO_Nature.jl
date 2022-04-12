@@ -64,7 +64,7 @@ function RL.Experiment(
     else
         global trial_id = runs[parse(Int, trial)]
         println("Resuming run: $trial_id")
-        agents = deserialize("policies/$trial_id.jls")
+        agents = deserialize("checkpoints/$trial_id.jls")
     end
 
     print("Enable TensorBoard Logging? y/n: ")
@@ -91,5 +91,5 @@ end
 
 ex = E`JuliaRL_PPO_Nature`
 run(ex)
-serialize("policies/$trial_id.jls", ex.policy)
+serialize("checkpoints/$trial_id.jls", ex.policy)
 # step_through_env(ex.env, policy)

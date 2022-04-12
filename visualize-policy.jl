@@ -1,12 +1,12 @@
 using Nature
 using Serialization
 
-pols = readdir("policies/")
+pols = readdir("checkpoints/")
 for (i, pol) in enumerate(pols)
     println(i, ". ", pol)
 end
 print("Select a policy: ")
-pol_name = "policies/"*pols[parse(Int, readline())]
+pol_name = "checkpoints/"*pols[parse(Int, readline())]
 
 p = deserialize(pol_name)
 

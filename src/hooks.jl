@@ -35,8 +35,14 @@ function (hook::NatureHook)(::PostActStage, policy, env)
         hook.food_counts = hook.food_counts .+ env.players[p].food_counts
     end
     hook.step += 1
-    if hook.max_steps % hook.step == 10_000
-        serialize("policies/$(hook.trial_id).jls", policy)
+    steps_per_checkpoint = 10_000
+    if hook.max_steps % hook.step == steps_per_checkpoint
+        log_step = if hasproperty(global_logger(), :global_step)
+            global_logger.global_step
+        else -1 end
+        serialize("checkpoints/$(hook.trial_id)/$(hook.step / steps_per_checkpoint)",
+                  Dict(:policy => policy,
+                       :tb_step=> log_step))
     end
 
 end
