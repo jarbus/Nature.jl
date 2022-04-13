@@ -66,11 +66,11 @@ function RLBase.reward(env::NatureEnv, player::Int)
     end
 end
 
-RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead || env.step > env.episode_len
+RLBase.is_terminated(env::NatureEnv, player::Int) = env.players[player].dead
 RLBase.is_terminated(env::NatureEnv, players::Vector{Int}) = Dict(p=>is_terminated(env, p) for p in players)
 function RLBase.is_terminated(env::NatureEnv)
     if all(is_terminated(env, p) for p in keys(env.players)) ||
-        env.step > env.episode_len
+        env.step >= env.episode_len
         return true
     else
         return false
@@ -158,6 +158,9 @@ function RLBase.state(env::NatureEnv, player::Int)
 end
 
 function (env::NatureEnv)(actions::Dict)
+    if is_terminated(env)
+        return nothing
+    end
     env.step > env.episode_len && begin
         println("exceeded")
         return nothing
@@ -168,7 +171,7 @@ end
 
 function (env::NatureEnv)(action::Int, player::Int)
 
-    if env.players[player].dead
+    if is_terminated(env, player)
         return nothing
     end
     # Players lose 0.1 food per tick, floored at 0

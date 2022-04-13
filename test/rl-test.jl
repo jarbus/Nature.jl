@@ -63,6 +63,8 @@ using Infiltrator
         @test states[3] == policy.agents[1].trajectory[:state][:,:,:,:,2]
         @test states[4] == policy.agents[1].trajectory[:state][:,:,:,:,3]
         @test is_terminated(env)
+        # check you can create terminal state
+        @test [state(env, p) for p in 1:length(env.players)] !== nothing
     end
 
     @testset "Frame tests" begin
@@ -103,6 +105,7 @@ using Infiltrator
         @test states[6][:,:,3nfc+1:end,:] == states[8][:,:,1nfc+1:2nfc,:]
         @test states[7][:,:,3nfc+1:end,:] == states[8][:,:,2nfc+1:3nfc,:]
         @test states[8][:,:,2nfc+1:3nfc,:] != states[8][:,:,3nfc+1:end,:]
-        @test length(states) == env.step - 1 == env.episode_len == UPDATE_FREQ + 2
+        step()
+        @test env.step == env.episode_len == UPDATE_FREQ + 2
     end
 end
