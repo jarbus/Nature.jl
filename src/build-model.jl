@@ -1,23 +1,23 @@
 function build_MultiPPOManager(env::NatureEnv, num_starting_players::Int, update_freq::Int, clip::Float32)
     ns, na = size(state(env, 1)), length(action_space(env,1))
 
-    cnn_output_shape = Int.(floor.([ns[1], ns[2], 64]))
+    cnn_output_shape = Int.(floor.([ns[1], ns[2], 32]))
     create_actor() = Chain(
-        Conv((3, 3), ns[3]=>64, pad=(2,2), relu),
-        Conv((3, 3), 64=>64, pad=(1,1), relu),
-        Conv((3, 3), 64=>64, pad=(1,1), relu),
+        Conv((3,3), ns[3]=>64, pad=(1,1), relu),
+        Conv((3, 3), 64=>32, pad=(1,1), relu),
+        Conv((3, 3), 32=>32, pad=(1,1), relu),
         flatten,
         Dense(prod(cnn_output_shape), 64),
-        Dense(64, na, relu)
+        Dense(64, na)
     )
 
     create_critic() = Chain(
-        Conv((3, 3), ns[3]=>64, pad=(2,2), relu),
-        Conv((3, 3), 64=>64, pad=(1,1), relu),
-        Conv((3, 3), 64=>64, pad=(1,1), relu),
+        Conv((3,3), ns[3]=>64, pad=(1,1), relu),
+        Conv((3, 3), 64=>32, pad=(1,1), relu),
+        Conv((3, 3), 32=>32, pad=(1,1), relu),
         flatten,
         Dense(prod(cnn_output_shape), 64),
-        Dense(64, 1, relu)
+        Dense(64, 1)
     )
 
     create_trajectory() = PPOTrajectory(;

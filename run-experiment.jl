@@ -24,6 +24,10 @@ function parse_commandline()
             help = "Maximum number of steps to run"
             arg_type = Int
             default = 500
+        "--num-frames"
+            help = "Maximum number of steps to run"
+            arg_type = Int
+            default = 1
         "--max-steps"
             help = "Maximum number of steps to run"
             arg_type = Int
@@ -48,7 +52,7 @@ env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
                 world_size=WORLD_SIZE,
                 episode_len=args["episode-len"],
                 window=3,
-                num_frames=4,
+                num_frames=args["num-frames"],
                 vocab_size=5,
                 food_generators=[
                     FoodGen([15,15],[60,60]),
