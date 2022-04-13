@@ -57,6 +57,10 @@ env = NatureEnv(num_starting_players=N_STARTING_PLAYERS,
 RLBase.reset!(env)
 
 
+hook = NatureHook(env, trial_id, args["max-steps"])
+stop_condition = StopAfterStep(args["max-steps"], is_show_progress=!haskey(ENV, "CI"))
+
+
 if args["tb"]
     println("Tensorboard Logging enabled.")
     disable_logging(Logging.Debug)
@@ -68,18 +72,20 @@ else
     global_logger(ConsoleLogger())
 end
 
-if ispath("tensorboard_logs/$trial_id")
-    last_step = sort(parse.(Int, readdir("checkpoints/$trial_id/")))[end]
-    last_checkpoint = deserialize("checkpoints/$trial_id/$last_step")
+if ispath("checkpoints/$trial_id") && length(readdir("checkpoints/$trial_id/")) > 0
+    dir_roots = map(x->x[1:end-4], readdir("checkpoints/$trial_id/"))
+    last_step = sort(parse.(Int, dir_roots))[end]
+    println("Resuming from checkpoint $last_step")
+    last_checkpoint = deserialize("checkpoints/$trial_id/$last_step.jls")
     global_logger().global_step = last_checkpoint[:tb_step]
     agents = last_checkpoint[:policy]
+    stop_condition.cur = last_checkpoint[:hook_step]
+    hook.step = last_checkpoint[:hook_step]
 else
+    ispath("checkpoints/$trial_id") || mkdir("checkpoints/$trial_id")
     agents = build_MultiPPOManager(env, N_STARTING_PLAYERS, UPDATE_FREQ, CLIP)
 end
 
-
-stop_condition = StopAfterStep(args["max-steps"], is_show_progress=!haskey(ENV, "CI"))
-hook = NatureHook(env, trial_id, args["max-steps"])
 
 ex = Experiment(agents, env, stop_condition, hook, "# PPO with Nature")
 

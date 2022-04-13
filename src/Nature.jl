@@ -14,6 +14,8 @@ using Infiltrator
 #using GLMakie
 using DataStructures
 using Serialization
+using Logging
+using TensorBoardLogger
 import Base: size
 import ReinforcementLearning.RLZoo: EnrichedAction
 
