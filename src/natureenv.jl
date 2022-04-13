@@ -102,6 +102,10 @@ function RLBase.state(env::NatureEnv, player::Int)
     if env.players[player].dead
         return zeros(Float32, env.obs_size)
     end
+    # Don't create a new frame if episode is over
+    if env.step > env.episode_len
+        return cat(env.past_states[player][end-env.num_frames+1:end]..., dims=3)
+    end
     w = env.window
     px, py = env.players[player].pos
     self_frame = make_frame(size(env)..., w)
