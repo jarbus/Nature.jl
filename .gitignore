@@ -3,3 +3,6 @@ checkpoints/
 outs/
 tensorboard_logs/
 examples/
+policies/*
+tensorboard_logs/*
+outs/*
