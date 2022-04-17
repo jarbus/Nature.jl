@@ -174,12 +174,18 @@ function (env::NatureEnv)(action::Int, player::Int)
     if is_terminated(env, player)
         return nothing
     end
-    # Players lose 0.1 food per tick, floored at 0
-    env.players[player].food_counts = env.players[player].food_counts .- 0.1f0 .|> x->max(x, 0f0)
 
     MOVE_RANGE = 1:4
     FOOD_RANGE = (MOVE_RANGE.stop+1)$(2*env.food_types)
     VOCAB_RANGE = (FOOD_RANGE.stop+1)$(env.vocab_size+1)
+
+    # Players lose 0.1 food per tick, floored at 0
+    if action in MOVE_RANGE
+        env.players[player].food_counts = env.players[player].food_counts .- 0.15f0 .|> x->max(x, 0f0)
+    else
+        env.players[player].food_counts = env.players[player].food_counts .- 0.1f0 .|> x->max(x, 0f0)
+    end
+
 
     (action in MOVE_RANGE) && move(env, player, action)
     (action in FOOD_RANGE) && food(env, player, action - FOOD_RANGE.start + 1)
